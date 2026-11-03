@@ -1,5 +1,7 @@
 # lilt ↗↘
 
+**▶ Try it: https://ajaranbior.github.io/lilt/**
+
 Fast, keyboard-driven drills for English **prosody**: word stress, rhythm, focus and intonation.
 It's a static web app with no build step and no dependencies.
 
@@ -11,7 +13,7 @@ Open `index.html` in Chrome, Edge or Firefox, or serve the folder:
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
-The microphone (Shadow mode) needs `localhost`, `https://` or `file://`. Live at **https://ajaranbior.github.io/lilt/**. Every push to `main` deploys through `.github/workflows/pages.yml`.
+The microphone (Shadow mode) needs `localhost`, `https://` or `file://`. Every push to `main` deploys through `.github/workflows/pages.yml`.
 
 ## Modes
 
