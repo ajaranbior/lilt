@@ -11,7 +11,7 @@ Open `index.html` in Chrome, Edge or Firefox, or serve the folder:
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
-The microphone (Shadow mode) needs `localhost`, `https://` or `file://`. You can also host it on GitHub Pages.
+The microphone (Shadow mode) needs `localhost`, `https://` or `file://`. Live at **https://ajaranbior.github.io/lilt/**. Every push to `main` deploys through `.github/workflows/pages.yml`.
 
 ## Modes
 
