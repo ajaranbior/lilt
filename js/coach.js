@@ -90,7 +90,7 @@
     recent.push(item.id); if (recent.length > 8) recent.shift();
     const s = prof[skill];
     item.reason = !s || !s.n ? "placement check" : `your score: ${Math.round(s.mu)}`;
-    item.challenge = s && s.n >= 4 && s.mu >= 85; // mastered: do it from memory
+    item.challenge = !!(s && s.n >= 4 && s.mu >= 85); // mastered: do it from memory
     return item;
   };
 

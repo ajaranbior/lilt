@@ -33,6 +33,7 @@
       <span><i class="sw line"></i>target melody (thicker = stressed syllable)</span>
       <span><i class="sw line nucl"></i>main stress, where the tune happens</span>
       <span><i class="sw dots"></i>your pitch</span>
+      <span><i class="sw loud"></i>your loudness while recording (peaks = stresses)</span>
       <span><i class="sw ring"></i><i class="sw ring big"></i>your syllables (bigger = stronger)</span>
       <span><i class="sw fill"></i>your strongest syllable</span>
       <span class="muted"><kbd>G</kbd> hide · <kbd>?</kbd> full guide</span>
@@ -48,7 +49,7 @@
     <ol>
       <li>Read the phrase. <b>Bold</b> marks stressed syllables, <span class="nuc">orange</span> marks the main stress, where the tune happens.</li>
       <li>The model hum plays first (<kbd>M</kbd> replays it). The grey line is the melody to copy.</li>
-      <li>Press <kbd>Space</kbd> and say it. Recording stops on its own when you pause.</li>
+      <li>Press <kbd>Space</kbd> and say it. Recording stops on its own when you pause. Messed up? Press <kbd>Space</kbd> again to restart.</li>
       <li>Your pitch appears as blue dots. The circles along the top show where your stresses landed, and the filled one is your strongest.</li>
       <li><kbd>Space</kbd> to retry, <kbd>Enter</kbd> for the next phrase.</li>
     </ol>
@@ -60,6 +61,7 @@
       <li><b style="color:var(--user)">Blue dots</b>: your actual pitch, scaled to your own voice, so it only needs to match the <i>shape</i>, not the height.</li>
       <li><b style="color:var(--user)">Circles along the top</b>: one per syllable Lilt heard. Bigger means that syllable stood out more (louder, longer, more pitch movement).
         The <b>filled</b> circle is your strongest one. It should sit above the orange segment.</li>
+      <li><b style="color:var(--user)">Faint bars along the bottom</b> (while recording): your loudness. Each peak is a syllable you stressed, so you can see your rhythm as you speak.</li>
       <li><b>Scores</b>: each line is one skill (melody, main stress, rhythm…). The bold line is the skill this phrase is training. Read the tip under it.</li>
     </ul>
     <h3>The four tunes</h3>
@@ -71,7 +73,8 @@
     </div>
     <h3>Keys</h3>
     <table>
-      <tr><td><kbd>Space</kbd></td><td>speak / stop / retry</td></tr>
+      <tr><td><kbd>Space</kbd></td><td>speak · while recording: restart · after feedback: try again</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>while recording: finish now (it also finishes when you pause)</td></tr>
       <tr><td><kbd>Enter</kbd> / <kbd>→</kbd></td><td>next phrase</td></tr>
       <tr><td><kbd>M</kbd></td><td>model hum (melody only)</td></tr>
       <tr><td><kbd>T</kbd></td><td>natural voice (text-to-speech; its melody may differ)</td></tr>

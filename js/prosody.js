@@ -215,6 +215,13 @@
       g.fillStyle = css("--user");
       opts.user.forEach(([t, st]) => { g.beginPath(); g.arc(X(t), Y(Math.max(lo, Math.min(hi, st))), 2.6, 0, 7); g.fill(); });
     }
+    // live loudness trace along the bottom (peaks = where your stresses are)
+    if (opts.energy && opts.energy.length) {
+      g.fillStyle = css("--user"); g.globalAlpha = 0.28;
+      const base = H - padB + 2, hgt = 26;
+      opts.energy.forEach(([t, v]) => { const h = Math.max(1, v * hgt); g.fillRect(X(t) - 1.5, base - h, 3, h); });
+      g.globalAlpha = 1;
+    }
     // where the speaker's stresses landed: circle size = prominence, filled = strongest
     if (opts.marks) opts.marks.forEach((m) => {
       const r = Math.max(2.5, Math.min(11, 5 + m.prom * 3.5));

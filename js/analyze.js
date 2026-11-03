@@ -49,6 +49,15 @@
     return { hz: SR / (tau + (Math.abs(sh) < 1 ? sh : 0)), cl: top };
   }
 
+  // Live (per animation frame) pitch for the recording display.
+  A.livePitch = function (buf, sr) {
+    let e = 0; for (let i = 0; i < buf.length; i++) e += buf[i] * buf[i];
+    const rms = Math.sqrt(e / buf.length);
+    const x = A.resample(buf, sr);
+    const r = pitchAt(x, x.length >> 1);
+    return { hz: r.cl >= 0.6 ? r.hz : 0, rms };
+  };
+
   // ---------- low level: frames, pitch, nuclei ----------
   A.extract = function (samples, sr) {
     const x = A.resample(samples, sr);
@@ -129,12 +138,13 @@
     }
     if (!peaks.length) return null;
     // syllable intervals at intensity minima between peaks
-    const bounds = [s];
+    let v0 = s, v1 = e; while (v0 < e && !hz[v0]) v0++; while (v1 > v0 && !hz[v1]) v1--;
+    const bounds = [Math.max(s, v0 - 6)];
     for (let i = 0; i < peaks.length - 1; i++) {
       let m = peaks[i]; for (let k = peaks[i]; k <= peaks[i + 1]; k++) if (I[k] < I[m]) m = k;
       bounds.push(m);
     }
-    bounds.push(e);
+    bounds.push(Math.min(e, v1 + 8));
     const nuclei = peaks.map((p, i) => {
       const a = bounds[i], b = bounds[i + 1];
       const sts = []; for (let k = a; k <= b; k++) if (st[k] != null) sts.push(st[k]);
@@ -143,7 +153,8 @@
         stMax: sts.length ? Math.max(...sts) : 0, stMin: sts.length ? Math.min(...sts) : 0, voiced: sts.length,
       };
     });
-    return { nF, s, e, t0: s / 100, t1: e / 100, dB, I, hz, st, med, nuclei, thr };
+    // speech timing reference = the voiced part (clicks, breaths and trailing noise are unvoiced)
+    return { nF, s, e, t0: v0 / 100, t1: v1 / 100, dB, I, hz, st, med, nuclei: nuclei.filter((n) => n.voiced >= 3), thr };
   };
 
   // ---------- alignment of detected nuclei to expected syllables ----------
@@ -155,8 +166,20 @@
     const tot = durs.reduce((a, b) => a + b, 0);
     let acc = 0;
     const ce = durs.map((d) => { const c = acc + d / 2; acc += d; return c; });
-    const pe = ce.map((c) => (n > 1 ? (c - ce[0]) / (ce[n - 1] - ce[0]) : 0.5));
-    const pd = det.map((d) => (k > 1 ? (d.t - det[0].t) / (det[k - 1].t - det[0].t) : 0.5));
+    const pe = ce.map((c) => c / tot);
+    const pd0 = det.map((d) => (d.t - t0) / (t1 - t0 || 1));
+    // try small shifts/stretches of the speaker's timing and keep the best fit
+    let best = null;
+    for (let off = -0.12; off <= 0.121; off += 0.04) for (let sc = 0.8; sc <= 1.251; sc += 0.075) {
+      const pd = pd0.map((p) => 0.5 + (p - 0.5) * sc + off);
+      const r = dp(pd, pe, exp);
+      if (!best || r.cost < best.cost) best = r;
+    }
+    return best.map;
+  }
+
+  function dp(pd, pe, exp) {
+    const k = pd.length, n = pe.length;
     const skipE = (j) => (exp[j].stress ? 2.5 : 0.6), skipD = 2;
     const D = Array.from({ length: k + 1 }, () => new Float32Array(n + 1).fill(Infinity));
     const B = Array.from({ length: k + 1 }, () => new Int8Array(n + 1));
@@ -171,7 +194,7 @@
       const b = B[i][j];
       if (b === 1) { map[i - 1] = j - 1; i--; j--; } else if (b === 2) j--; else i--;
     }
-    return map;
+    return { map, cost: D[k][n] };
   }
 
   function prominence(nuclei, med) {
@@ -179,7 +202,7 @@
     if (k === 1) return [1];
     const last = k - 1;
     const fdB = nuclei.map((n) => n.dB);
-    const fDur = nuclei.map((n, i) => n.dur * (i === last ? 0.7 : 1));
+    const fDur = nuclei.map((n, i) => n.dur * (i === last ? 0.85 : 1));
     const fP = nuclei.map((n) => n.stMax + 0.5 * (n.stMax - n.stMin));
     const z = (a) => { const m = mean(a), s = sd(a); return a.map((x) => (x - m) / s); };
     const a = z(fdB), b = z(fDur), c = z(fP);
@@ -217,7 +240,18 @@
 
     // pitch points mapped onto target time for display/correlation
     const tA = exp[0].start, tB = exp[exp.length - 1].start + exp[exp.length - 1].dur;
-    const toT = (t) => tA + ((t - x.t0) / (x.t1 - x.t0 || 1)) * (tB - tA);
+    // anchors: speech start/end + every matched syllable nucleus -> its target syllable centre
+    const anc = [[x.t0, tA]];
+    det.forEach((d) => { if (d.exp >= 0) { const s = exp[d.exp]; anc.push([d.t, s.start + s.dur / 2]); } });
+    anc.push([x.t1, tB]);
+    anc.sort((a, b) => a[0] - b[0]);
+    const A2 = anc.filter((p, i) => i === 0 || (p[0] > anc[i - 1][0] + 0.01 && p[1] > anc[i - 1][1]));
+    const toT = (t) => {
+      if (A2.length < 2) return tA + ((t - x.t0) / (x.t1 - x.t0 || 1)) * (tB - tA);
+      let i = 1; while (i < A2.length - 1 && t > A2[i][0]) i++;
+      const [a0, b0] = A2[i - 1], [a1, b1] = A2[i];
+      return b0 + ((t - a0) / (a1 - a0 || 1)) * (b1 - b0);
+    };
     const tv = []; for (let i = 0; i <= 60; i++) { const v = Prosody.valueAt(c, tA + ((tB - tA) * i) / 60); if (v != null) tv.push(v); }
     const tMed = median(tv);
     const pts = []; for (let f = x.s; f <= x.e; f++) if (x.st[f] != null) pts.push([toT(f / 100), x.st[f] + tMed, f / 100]);

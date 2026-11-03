@@ -36,7 +36,7 @@ with the lowest score, with some variety. Your profile and per-phrase history ar
 
 ## Keys
 
-`Space` speak / stop / retry · `Enter` next · `M` model hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
+`Space` speak / restart while recording / retry · `Enter` finish recording or next phrase · `M` model hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
 Menu: `M` auto-play model · `N` auto-next on 85+ · `V` low/high hum voice · `R` clarity check · `X` reset profile
 
 ## Run locally

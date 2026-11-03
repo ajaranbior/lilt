@@ -2,6 +2,9 @@
 (function () {
   const M = {};
   let ac, stream, src, proc, chunks = [], state = "idle", floor = 0.004, cb = {}, speechBlocks = 0, silentBlocks = 0, started = false, t0 = 0;
+  let analyser = null, abuf = null;
+  // current pitch + loudness, for the live display
+  M.frame = () => { if (!analyser) return null; analyser.getFloatTimeDomainData(abuf); return Analyze.livePitch(abuf, ac.sampleRate); };
   let recog = null, recogText = null, recogDone = null;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   M.canRecognize = !!SR;
@@ -19,6 +22,8 @@
     proc = ac.createScriptProcessor(2048, 1, 1);
     const mute = ac.createGain(); mute.gain.value = 0;
     src.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+    analyser = ac.createAnalyser(); analyser.fftSize = 4096; src.connect(analyser);
+    abuf = new Float32Array(analyser.fftSize);
     proc.onaudioprocess = (e) => {
       const x = e.inputBuffer.getChannelData(0);
       let s = 0; for (let i = 0; i < x.length; i++) s += x[i] * x[i];
@@ -52,11 +57,14 @@
     }
   };
 
-  M.stop = function () {
+  M.stop = function (manual) {
     if (state !== "rec") return;
     state = "idle";
-    const n = chunks.reduce((a, c) => a + c.length, 0), x = new Float32Array(n);
-    let o = 0; for (const c of chunks) { x.set(c, o); o += c.length; }
+    const n = chunks.reduce((a, c) => a + c.length, 0), all = new Float32Array(n);
+    let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+    // the Space key's click lands in the recording: skip the first 150 ms (and the last 200 ms on a manual stop)
+    const cut0 = Math.min(n, Math.round(ac.sampleRate * 0.15)), cut1 = manual ? Math.round(ac.sampleRate * 0.2) : 0;
+    const x = all.subarray(cut0, Math.max(cut0, n - cut1));
     let rp = null;
     if (recog) {
       try { recog.stop(); } catch (e) {}

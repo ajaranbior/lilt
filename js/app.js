@@ -66,7 +66,7 @@
   function drawContour(extra = {}) {
     const it = S.item, cv = $("#contour");
     const hide = it.challenge && !S.result;
-    cv.classList.toggle("hidden-contour", hide);
+    cv.classList.toggle("hidden-contour", !!hide);
     P.draw(cv, it.contour, { user: S.result && S.result.pts, marks: S.result && S.result.marks, ...extra });
   }
 
@@ -83,7 +83,7 @@
 
   function nextItem() {
     clearTimeout(S.auto);
-    Mic.cancel(); P.stop();
+    Mic.cancel(); stopLive(); P.stop();
     if (S.done >= SESSION) return endSession();
     S.item = C.next(); S.result = null; S.attempts = 0; S.rec = null;
     S.skills.add(S.item.primary);
@@ -108,22 +108,60 @@
   }
 
   async function speak() {
-    if (Mic.recording()) { Mic.stop(); return; }
+    if (Mic.recording()) { Mic.cancel(); stopLive(); } // Space while recording = throw it away and start over
     animId++; P.stop();
     try { if (!Mic.ready()) { $("#feedback").innerHTML = `<p class="muted">Allow microphone access…</p>`; await Mic.init(); } }
     catch (e) { $("#feedback").innerHTML = `<p class="bad">Microphone unavailable: ${esc(e.message)}. Lilt needs a mic. Check the browser's permission settings.</p>`; return; }
     clearTimeout(S.auto);
     $("#drill").classList.add("recording");
     $("#feedback").innerHTML = `<div class="listening"><span class="rec-dot"></span> Listening… it stops when you pause. <span class="meter"><i></i></span></div>`;
-    keys(`<kbd>Space</kbd> stop`);
+    keys(`<kbd>Space</kbd> restart &nbsp; <kbd>Enter</kbd> finish &nbsp; <kbd>Esc</kbd> cancel`);
     const meter = () => $(".meter i");
+    startLive();
     Mic.start({
       maxSec: Math.max(4, S.item.contour.total * 2.5 + 1.5),
       recognize: C.useRecognition(),
       level: (rms, on) => { const m = meter(); if (m) m.style.width = Math.min(100, (rms / (on * 4)) * 100) + "%"; },
-      done: (rec) => { $("#drill").classList.remove("recording"); finish(rec); },
+      done: (rec) => { stopLive(); S.recEnd = performance.now(); $("#drill").classList.remove("recording"); finish(rec); },
     });
   }
+
+  // ---------- live display while recording ----------
+  let liveId = 0;
+  function startLive() {
+    const id = ++liveId, it = S.item, c = it.contour;
+    const tA = c.syls[0].start, tB = c.syls[c.syls.length - 1].start + c.syls[c.syls.length - 1].dur;
+    const tv = []; for (let i = 0; i <= 60; i++) { const v = P.valueAt(c, tA + ((tB - tA) * i) / 60); if (v != null) tv.push(v); }
+    tv.sort((a, b) => a - b); const tMed = tv[tv.length >> 1] || 0;
+    const t0 = performance.now(), fr = [];
+    let first = null, peak = 1e-4;
+    const step = () => {
+      if (id !== liveId) return;
+      const f = Mic.frame();
+      const t = (performance.now() - t0) / 1000;
+      if (f && t > 0.12) { // skip the key click
+        fr.push({ t, hz: f.hz, rms: f.rms });
+        if (f.hz && first == null) first = t;
+        peak = Math.max(peak, f.rms);
+      }
+      if (first != null) {
+        const voiced = fr.filter((x) => x.hz).map((x) => x.hz).sort((a, b) => a - b);
+        const med = voiced[voiced.length >> 1];
+        const span = Math.max((tB - tA) * 1.15, t - first); // squeeze if you're slower than the model
+        const map = (tt) => tA + ((tt - first) / span) * (tB - tA);
+        const user = [], energy = [];
+        fr.forEach((x) => {
+          if (x.t < first - 0.05) return;
+          energy.push([map(x.t), Math.min(1, x.rms / peak)]);
+          if (x.hz && x.hz > med * 0.55 && x.hz < med * 1.9) user.push([map(x.t), 12 * Math.log2(x.hz / med) + tMed]);
+        });
+        P.draw($("#contour"), c, { user, energy });
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step); // (stays hidden in "from memory" mode)
+  }
+  function stopLive() { liveId++; }
 
   function finish(rec) {
     S.rec = rec;
@@ -216,10 +254,24 @@
     }
     if (k === "g") { const on = !C.store.get("legend", true); C.store.set("legend", on); $("#legend").hidden = !on; return; }
     // drill
-    if (k === "Escape") { clearTimeout(S.auto); Mic.cancel(); P.stop(); $("#drill").classList.remove("recording"); show("home"); return; }
+    if (Mic.recording()) {
+      if (k === " ") { e.preventDefault(); speak(); }
+      else if (k === "Enter") { e.preventDefault(); Mic.stop(true); }
+      else if (k === "Escape") {
+        Mic.cancel(); stopLive(); $("#drill").classList.remove("recording"); drawContour();
+        $("#feedback").innerHTML = `<p class="muted">Recording cancelled.</p>`;
+        keys(S.result ? K_DONE : K_IDLE);
+      }
+      return;
+    }
+    if (k === "Escape") { clearTimeout(S.auto); Mic.cancel(); stopLive(); P.stop(); $("#drill").classList.remove("recording"); show("home"); return; }
     if (k === " ") { e.preventDefault(); speak(); return; }
     if (Mic.recording()) return;
-    if (k === "Enter" || k === "ArrowRight") { e.preventDefault(); advance(); return; }
+    if (k === "Enter" || k === "ArrowRight") {
+      e.preventDefault();
+      if (performance.now() - (S.recEnd || 0) < 350) return; // Enter meant "finish", but auto-stop beat it: don't skip the feedback
+      advance(); return;
+    }
     if (k === "m") { clearTimeout(S.auto); playModel(); return; }
     if (k === "t") { clearTimeout(S.auto); P.say(S.item.text); return; }
     if (k === "p" && S.rec) { clearTimeout(S.auto); Mic.play(S.rec.samples, S.rec.sr); return; }
