@@ -58,9 +58,9 @@
     $("#card").innerHTML = `
       ${it.ctx ? `<div class="ctx">${esc(it.ctx)}</div>` : ""}
       <div class="prompt ${it.kind === "word" ? "big" : ""} words">${sentenceHTML(it, hide)}</div>
-      ${ti ? `<span class="tag">${ti.sym} ${ti.name}</span>` : ""}
+      ${ti ? `<div class="tune"><span class="tag">${ti.sym} ${ti.name}</span><span>${esc(ti.how)} <span class="muted">${esc(ti.means)}</span></span></div>` : ""}
       ${hide ? `<span class="tag ghost">from memory: you've mastered this</span>` : ""}
-      <p class="how">${esc(C.SKILLS[it.primary].how)}</p>`;
+      ${it.primary.startsWith("melody:") ? "" : `<p class="how">${esc(C.SKILLS[it.primary].how)}</p>`}`;
   }
 
   function drawContour(extra = {}) {
@@ -214,6 +214,7 @@
       if (k === "Escape") show("home");
       return;
     }
+    if (k === "g") { const on = !C.store.get("legend", true); C.store.set("legend", on); $("#legend").hidden = !on; return; }
     // drill
     if (k === "Escape") { clearTimeout(S.auto); Mic.cancel(); P.stop(); $("#drill").classList.remove("recording"); show("home"); return; }
     if (k === " ") { e.preventDefault(); speak(); return; }
@@ -228,5 +229,13 @@
   window.addEventListener("resize", () => { if (screen === "drill" && S && S.item) drawContour(); });
 
   P.settings.base = C.store.get("base", 120);
+  $("#legend").hidden = !C.store.get("legend", true);
+  // tiny tune diagrams in the help, drawn from the same model as the hum
+  document.querySelectorAll("svg[data-tune]").forEach((svg) => {
+    const c = P.contour(P.parse("*main word is here"), svg.dataset.tune);
+    const pts = c.syls.flatMap((s) => s.pts).map(([t, st]) => `${4 + (t / c.total) * 112},${38 - ((st + 5.5) / 14) * 36}`);
+    svg.innerHTML = `<polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  });
   show("home");
+  if (!C.store.get("seenHelp", false)) { $("#help").hidden = false; C.store.set("seenHelp", true); }
 })();

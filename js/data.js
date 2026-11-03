@@ -151,10 +151,14 @@ window.TUNES = [
 ];
 
 window.TUNE_INFO = {
-  fall:     { key: "1", name: "Fall",      sym: "↘",  desc: "finished · certain" },
-  rise:     { key: "2", name: "Rise",      sym: "↗",  desc: "open · questioning" },
-  fallrise: { key: "3", name: "Fall-rise", sym: "↘↗", desc: "reservation · 'but…'" },
-  risefall: { key: "4", name: "Rise-fall", sym: "↗↘", desc: "strong feeling" },
+  fall:     { key: "1", name: "Fall",      sym: "↘",  desc: "finished · certain",
+              how: "Start high on the main word, then drop to the bottom of your voice.", means: "Sounds finished and sure. Used for statements, commands and wh-questions." },
+  rise:     { key: "2", name: "Rise",      sym: "↗",  desc: "open · questioning",
+              how: "Start low on the main word and glide up to the end.", means: "Sounds open and unfinished. Used for yes/no questions and “more is coming”." },
+  fallrise: { key: "3", name: "Fall-rise", sym: "↘↗", desc: "reservation · 'but…'",
+              how: "Drop on the main word, then curl back up at the very end.", means: "Sounds like an unspoken “…but”: partial agreement, hedging, politeness." },
+  risefall: { key: "4", name: "Rise-fall", sym: "↗↘", desc: "strong feeling",
+              how: "Swoop up on the main word, then fall steeply.", means: "Sounds emotional: impressed, delighted, shocked or emphatic." },
 };
 window.TUNE_ORDER = ["fall", "rise", "fallrise", "risefall"];
 

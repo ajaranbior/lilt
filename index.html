@@ -29,6 +29,14 @@
     <div id="top"></div>
     <div id="card"></div>
     <canvas id="contour"></canvas>
+    <div id="legend" class="legend">
+      <span><i class="sw line"></i>target melody (thicker = stressed syllable)</span>
+      <span><i class="sw line nucl"></i>main stress, where the tune happens</span>
+      <span><i class="sw dots"></i>your pitch</span>
+      <span><i class="sw ring"></i><i class="sw ring big"></i>your syllables (bigger = stronger)</span>
+      <span><i class="sw fill"></i>your strongest syllable</span>
+      <span class="muted"><kbd>G</kbd> hide · <kbd>?</kbd> full guide</span>
+    </div>
     <div id="feedback"></div>
     <div id="keys" class="keys"></div>
   </section>
@@ -44,12 +52,31 @@
       <li>Your pitch appears as blue dots. The circles along the top show where your stresses landed, and the filled one is your strongest.</li>
       <li><kbd>Space</kbd> to retry, <kbd>Enter</kbd> for the next phrase.</li>
     </ol>
+    <h3>Reading the screen</h3>
+    <ul class="guide">
+      <li><b>Grey line</b>: the melody to copy, drawn left to right as the phrase goes on. Higher on the line means higher pitch.
+        Thick segments are stressed syllables; thin ones are weak syllables that should be short and quiet.</li>
+      <li><b class="nuc">Orange segment</b>: the <i>main stress</i>, the most important word in the phrase. The tune (fall, rise…) starts here and runs to the end.</li>
+      <li><b style="color:var(--user)">Blue dots</b>: your actual pitch, scaled to your own voice, so it only needs to match the <i>shape</i>, not the height.</li>
+      <li><b style="color:var(--user)">Circles along the top</b>: one per syllable Lilt heard. Bigger means that syllable stood out more (louder, longer, more pitch movement).
+        The <b>filled</b> circle is your strongest one. It should sit above the orange segment.</li>
+      <li><b>Scores</b>: each line is one skill (melody, main stress, rhythm…). The bold line is the skill this phrase is training. Read the tip under it.</li>
+    </ul>
+    <h3>The four tunes</h3>
+    <div class="tunes">
+      <div><svg data-tune="fall" viewBox="0 0 120 42"></svg><b>↘ Fall</b><span>Start high on the main word, drop to the bottom. Sounds finished and sure: <i>“I live in LONdon.”</i></span></div>
+      <div><svg data-tune="rise" viewBox="0 0 120 42"></svg><b>↗ Rise</b><span>Start low, glide up to the end. Sounds open and questioning: <i>“Are you coming to the PARty?”</i></span></div>
+      <div><svg data-tune="fallrise" viewBox="0 0 120 42"></svg><b>↘↗ Fall-rise</b><span>Drop, then curl up at the very end. An unspoken “…but”: <i>“Well, the food was GOOD…”</i></span></div>
+      <div><svg data-tune="risefall" viewBox="0 0 120 42"></svg><b>↗↘ Rise-fall</b><span>Swoop up, then fall steeply. Strong feeling: <i>“That's aMAZing!”</i></span></div>
+    </div>
+    <h3>Keys</h3>
     <table>
       <tr><td><kbd>Space</kbd></td><td>speak / stop / retry</td></tr>
       <tr><td><kbd>Enter</kbd> / <kbd>→</kbd></td><td>next phrase</td></tr>
       <tr><td><kbd>M</kbd></td><td>model hum (melody only)</td></tr>
       <tr><td><kbd>T</kbd></td><td>natural voice (text-to-speech; its melody may differ)</td></tr>
       <tr><td><kbd>P</kbd></td><td>play back your recording</td></tr>
+      <tr><td><kbd>G</kbd></td><td>show / hide the legend under the chart</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>menu</td></tr>
     </table>
     <p class="muted">What gets measured: <b>melody</b> (the tune's shape after the main stress), <b>main stress</b> (which word stood out most),
