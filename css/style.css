@@ -131,3 +131,10 @@ button { font: inherit; color: inherit; }
 .rrow.you span { background: color-mix(in srgb, var(--user) 18%, transparent); color: var(--fg); } .rrow.you span.s, .rrow.you span.n { background: color-mix(in srgb, var(--user) 55%, transparent); color: #fff; font-weight: 700; }
 .rrow span.n { outline: 2px solid var(--accent); outline-offset: -2px; }
 .overall span kbd { font-size: 11px; }
+
+.helpbtn { position: fixed; top: 14px; right: 14px; z-index: 20; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--card); color: var(--fg); font: 700 17px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+.helpbtn:hover, .helpbtn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+#help { padding-top: 56px; }
+.helpclose { position: fixed; top: 14px; right: 56px; z-index: 20; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--card); color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }

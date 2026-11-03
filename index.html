@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<button id="helpbtn" class="helpbtn" aria-label="Guide: what the screen means" aria-expanded="false" title="Guide (?)">?</button>
 <main>
   <section id="home">
     <header>
@@ -45,6 +46,7 @@
   <section id="end" hidden></section>
 
   <aside id="help" hidden>
+    <button id="helpclose" class="helpclose" aria-label="Close guide">×</button>
     <h2>How to use Lilt</h2>
     <ol>
       <li>Read the phrase. <b>Bold</b> marks stressed syllables, <span class="nuc">orange</span> marks the main stress, where the tune happens.</li>
@@ -94,6 +96,7 @@
   </aside>
 </main>
 <script src="js/data.js"></script>
+<script src="js/bank.js"></script>
 <script src="js/prosody.js"></script>
 <script src="js/analyze.js"></script>
 <script src="js/resynth.js"></script>

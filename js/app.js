@@ -314,5 +314,7 @@
     svg.innerHTML = `<polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
   show("home");
-  if (!C.store.get("seenHelp", false)) { $("#help").hidden = false; C.store.set("seenHelp", true); }
+  const toggleHelp = () => { $("#help").hidden = !$("#help").hidden; $("#helpbtn").setAttribute("aria-expanded", String(!$("#help").hidden)); };
+  $("#helpbtn").addEventListener("click", (e) => { e.currentTarget.blur(); toggleHelp(); });
+  $("#helpclose").addEventListener("click", toggleHelp);
 })();

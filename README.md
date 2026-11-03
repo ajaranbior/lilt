@@ -15,7 +15,9 @@ Everything is keyboard-driven and fast.
 4. You get a score plus feedback lines like *"Your main stress landed on 'Mary'. Put it on 'red'"* or
    *"From 'party' onward your pitch fell. It should rise at the end."* Your pitch appears over the target,
    and circles show where your stresses actually landed.
-5. `Space` to retry, `Enter` for the next phrase.
+5. Press `F` to **hear it fixed**: your own recording, re-synthesised with the target melody, rhythm and stress.
+   Compare it with `P` (as you said it) and copy the fixed version.
+6. `Space` to retry, `Enter` for the next phrase.
 
 ## What it measures
 
@@ -36,7 +38,7 @@ with the lowest score, with some variety. Your profile and per-phrase history ar
 
 ## Keys
 
-`Space` speak / restart while recording / retry · `Enter` finish recording or next phrase · `M` model hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
+`Space` speak / restart while recording / retry · `Enter` finish recording or next phrase · `F` hear it fixed · `M` model hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
 Menu: `M` auto-play model · `N` auto-next on 85+ · `V` low/high hum voice · `R` clarity check · `X` reset profile
 
 ## Run locally
@@ -57,7 +59,9 @@ Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
 - `js/coach.js`: skill profile (exponential moving average per skill), item pools per skill, and next-item selection.
 - `js/prosody.js`: sentence markup → timed syllables → target pitch contour → hummed model audio and drawing.
 - `js/mic.js`: capture with voice-activity auto-stop, plus optional Web Speech recognition.
-- `js/data.js`: words, focus pairs, tunes and rhythm sentences. Add your own: `I 'left my 'keys in the *kitch-en.`
+- `js/resynth.js`: "hear it fixed". TD-PSOLA re-synthesis of your recording: pitch re-shaped to the target tune
+  around your own voice level, stressed syllables stretched and weak ones squeezed, stresses made louder.
+- `js/data.js` + `js/bank.js`: about 290 words, 70 focus answers, 60 tune phrases and 50 rhythm sentences. Add your own: `I 'left my 'keys in the *kitch-en.`
   (`'` = stressed syllable, `*` = main stress, `-` between syllables).
 
 Limits: the analysis is a heuristic, not a trained model. It judges prosody (melody, stress, timing), not individual
