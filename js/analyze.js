@@ -330,8 +330,33 @@
   };
 
   // ---------- word-level comparison for recognized speech ----------
+  // Recognizers write numbers as digits ("10") and may pick US or UK spellings; normalize both sides.
+  const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+    "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+  const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+  const ORD = { one: "first", two: "second", three: "third", five: "fifth", eight: "eighth", nine: "ninth", twelve: "twelfth" };
+  function numWords(n) {
+    if (n < 20) return ONES[n];
+    if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? " " + ONES[n % 10] : "");
+    if (n < 1000) return ONES[Math.floor(n / 100)] + " hundred" + (n % 100 ? " " + numWords(n % 100) : "");
+    if (n < 1e6) return numWords(Math.floor(n / 1000)) + " thousand" + (n % 1000 ? " " + numWords(n % 1000) : "");
+    return String(n);
+  }
+  function ordinal(n) {
+    const w = numWords(n).split(" "), last = w.pop();
+    return [...w, ORD[last] || (last.endsWith("y") ? last.slice(0, -1) + "ieth" : last + "th")].join(" ");
+  }
+  const SPELL = { center: "centre", theater: "theatre", color: "colour", favorite: "favourite", realize: "realise", ok: "okay", "o.k.": "okay" };
+  A.normWords = function (s) {
+    return s.toLowerCase().replace(/[’‘]/g, "'")
+      .replace(/(\d+)(st|nd|rd|th)\b/g, (_, d) => " " + ordinal(+d) + " ")
+      .replace(/\d+/g, (d) => " " + numWords(+d) + " ")
+      .replace(/-/g, " ").replace(/[^a-z' ]+/g, " ").trim().split(/\s+/).filter(Boolean)
+      .map((w) => SPELL[w] || w);
+  };
+
   A.wordAccuracy = function (target, heard) {
-    const norm = (s) => s.toLowerCase().replace(/[’]/g, "'").replace(/[^a-z' ]+/g, " ").trim().split(/\s+/).filter(Boolean);
+    const norm = A.normWords;
     const a = norm(target), b = norm(heard);
     const D = Array.from({ length: a.length + 1 }, (_, i) => [i, ...new Array(b.length).fill(0)]);
     for (let j = 1; j <= b.length; j++) D[0][j] = j;
