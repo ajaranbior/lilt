@@ -2,53 +2,63 @@
 
 **▶ Try it: https://ajaranbior.github.io/lilt/**
 
-Fast, keyboard-driven drills for English **prosody**: word stress, rhythm, focus and intonation.
-It's a static web app with no build step and no dependencies.
+A speaking coach for English **intonation, stress and rhythm**. You say a phrase, Lilt measures how you said it
+and gives you instant, concrete feedback. It builds a profile of your weak spots and keeps giving you more practice on them.
+Everything is keyboard-driven and fast.
 
-## Run
+## How a session works
 
-Open `index.html` in Chrome, Edge or Firefox, or serve the folder:
+1. Press `Space` on the menu to start a 10-phrase session.
+2. Each phrase shows its stress marks (**bold** = stressed, orange = main stress) and the target melody line.
+   A hummed model plays first, so you hear only the melody.
+3. Press `Space` and speak. Recording stops on its own when you pause.
+4. You get a score plus feedback lines like *"Your main stress landed on 'Mary'. Put it on 'red'"* or
+   *"From 'party' onward your pitch fell. It should rise at the end."* Your pitch appears over the target,
+   and circles show where your stresses actually landed.
+5. `Space` to retry, `Enter` for the next phrase.
+
+## What it measures
+
+| Skill | How it's measured |
+|---|---|
+| Melody: falls, rises, fall-rises, rise-falls | Pitch shape from the main stress to the end of the phrase, plus overall contour correlation |
+| Sentence stress / contrastive stress | Which word had the strongest syllable (loudness + length + pitch movement) |
+| Word stress | Which syllable of the word was most prominent |
+| Rhythm & weak syllables | How much longer and louder the stressed syllables are than the weak ones |
+| Pitch range | Your pitch span in semitones (flat speech is the most common problem) |
+| Clarity | Whether the browser's speech recognition understood the words (Chrome/Edge; sends audio to the browser vendor; toggle with `R`) |
+
+## Adaptive coach
+
+The first ~10 phrases are a placement check covering every skill. After that, each phrase targets the skill
+with the lowest score, with some variety. Your profile and per-phrase history are saved in `localStorage`
+(this browser only). Once a skill is mastered (85+), its stress marks are hidden, so you produce the stress from memory.
+
+## Keys
+
+`Space` speak / stop / retry · `Enter` next · `M` model hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
+Menu: `M` auto-play model · `N` auto-next on 85+ · `V` low/high hum voice · `R` clarity check · `X` reset profile
+
+## Run locally
 
 ```bash
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
-The microphone (Shadow mode) needs `localhost`, `https://` or `file://`. Every push to `main` deploys through `.github/workflows/pages.yml`.
-
-## Modes
-
-| Key | Mode | What you train |
-|---|---|---|
-| 1 | **Word stress** | Pick the stressed syllable (PHOtograph / phoTOGrapher / photoGRAPHic, REcord vs reCORD). |
-| 2 | **Rhythm** | Choose the natural stress pattern of a sentence (which words are strong vs. weak). |
-| 3 | **Focus** | Given a question, choose which word in the answer carries the main stress. |
-| 4 | **Tune** | Pick fall / rise / fall-rise / rise-fall for a context, then read why. |
-| 5 | **Ear training** | Hear only the hummed melody and identify the tune or the focus word. |
-| 6 | **Shadow** | Say or hum the sentence into the mic. Your pitch is tracked live and scored against the target contour. |
-
-Each round has 20 items (8 in Shadow). Fast, correct answers and streaks earn more points.
-Items you miss come back more often; that history is stored in `localStorage`.
-
-## Keys
-
-`1`–`9` answer · `Space` replay hum · `Enter`/`→` next · `T` natural voice · `C` hear the tune you picked ·
-`R` record (Shadow) · `Esc` menu · `?` help · on the menu: `V` low/high hum voice, `A` toggle auto-advance.
+The mic needs `localhost` or `https://`. Use Chrome or Edge for the clarity check; everything else works in Firefox too.
+Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
 
 ## How it works
 
-- **Hum synthesis** (`js/prosody.js`): sentences are written in a small markup
-  (`I 'left my 'keys in the *kitch-en.`, where `'` is stressed and `*` is the nucleus). They become timed
-  syllables (stressed syllables are longer and louder) and a pitch contour (declining pre-nuclear accents plus a
-  tune shape over the nucleus and tail). A filtered sawtooth plays it back as a "mm-MM-mm" hum.
-  Removing the words makes melody and rhythm much easier to hear.
-- **Pitch tracking** (`js/pitch.js`): McLeod normalized square difference on the mic signal, followed by a
-  median filter and octave-error rejection.
-- **Scoring**: your contour is time-normalized and median-normalized (so voice range doesn't matter), then
-  compared to the target by correlation, ending direction (rising vs. falling) and pitch range.
+- `js/analyze.js`: all analysis runs in the browser. Audio is resampled to 16 kHz, then pitch is tracked with the
+  McLeod NSDF method (median-filtered, with octave errors corrected). Syllable nuclei are taken from intensity peaks
+  with dips between them (after de Jong & Wempe). The nuclei are aligned to the expected syllables with dynamic
+  programming, and each syllable gets a prominence score from loudness, duration and pitch.
+- `js/coach.js`: skill profile (exponential moving average per skill), item pools per skill, and next-item selection.
+- `js/prosody.js`: sentence markup → timed syllables → target pitch contour → hummed model audio and drawing.
+- `js/mic.js`: capture with voice-activity auto-stop, plus optional Web Speech recognition.
+- `js/data.js`: words, focus pairs, tunes and rhythm sentences. Add your own: `I 'left my 'keys in the *kitch-en.`
+  (`'` = stressed syllable, `*` = main stress, `-` between syllables).
 
-## Add content
-
-Edit `js/data.js`. Words use CAPS for the stressed syllable (`pho-TOG-ra-pher`). Sentences use the markup above.
-
-The tune model is a teaching simplification: it is closer to British-style nuclear tones than to American
-ToBI. Real speech is more varied, but these four tunes cover most of the meaning contrasts.
+Limits: the analysis is a heuristic, not a trained model. It judges prosody (melody, stress, timing), not individual
+vowel and consonant sounds. Use headphones or a quiet room for the most reliable results.

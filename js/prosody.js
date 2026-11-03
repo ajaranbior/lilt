@@ -154,6 +154,7 @@
   };
 
   P.playing = () => current;
+  P.setCurrent = (c) => { current = c; };
 
   let voice = null;
   function pickVoice() {
@@ -183,7 +184,7 @@
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
     if (!c) return;
-    const padL = 12, padR = 12, padT = 14, padB = 30;
+    const padL = 12, padR = 12, padT = opts.marks ? 30 : 14, padB = 30;
     const lo = -6, hi = 9;
     const X = (t) => padL + (t / c.total) * (W - padL - padR);
     const Y = (st) => padT + (1 - (st - lo) / (hi - lo)) * (H - padT - padB);
@@ -214,6 +215,12 @@
       g.fillStyle = css("--user");
       opts.user.forEach(([t, st]) => { g.beginPath(); g.arc(X(t), Y(Math.max(lo, Math.min(hi, st))), 2.6, 0, 7); g.fill(); });
     }
+    // where the speaker's stresses landed: circle size = prominence, filled = strongest
+    if (opts.marks) opts.marks.forEach((m) => {
+      const r = Math.max(2.5, Math.min(11, 5 + m.prom * 3.5));
+      g.beginPath(); g.arc(X(Math.max(0, Math.min(c.total, m.t))), 14, r, 0, 7);
+      if (m.top) { g.fillStyle = css("--user"); g.fill(); } else { g.strokeStyle = css("--user"); g.lineWidth = 1.5; g.stroke(); }
+    });
     // playhead
     if (opts.head != null && opts.head >= 0 && opts.head <= c.total) {
       g.strokeStyle = css("--muted"); g.lineWidth = 1.5;

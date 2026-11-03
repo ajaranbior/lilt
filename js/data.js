@@ -157,3 +157,25 @@ window.TUNE_INFO = {
   risefall: { key: "4", name: "Rise-fall", sym: "↗↘", desc: "strong feeling" },
 };
 window.TUNE_ORDER = ["fall", "rise", "fallrise", "risefall"];
+
+// Longer sentences with many weak syllables: rhythm (stress-timing) practice.
+window.RHYTHM = [
+  { s: "I 'want to 'go to the *shops.", t: "fall" },
+  { s: "What do you 'want to 'do for your *birth-day?", t: "fall" },
+  { s: "It was 'one of the 'best 'films I've 'ev-er *seen.", t: "fall" },
+  { s: "I should have 'called you a-*gain.", t: "fall" },
+  { s: "'Can you 'tell me the 'way to the *sta-tion?", t: "rise" },
+  { s: "He's 'go-ing to be 'late a-*gain.", t: "fall" },
+  { s: "There's a 'lot of 'traf-fic in the 'cen-tre of *town.", t: "fall" },
+  { s: "We could have 'gone to the *beach.", t: "fall" },
+  { s: "'Some of them were 'ver-y *good.", t: "fall" },
+  { s: "I was 'think-ing of 'ask-ing for a *raise.", t: "fall" },
+  { s: "What are you 'go-ing to *do?", t: "fall" },
+  { s: "It's 'not as 'bad as I *thought.", t: "fall" },
+  { s: "I'd 'like a 'cup of *tea.", t: "fall" },
+  { s: "They've been 'liv-ing here for a-'bout 'ten *years.", t: "fall" },
+  { s: "I 'think it's 'go-ing to *rain.", t: "fall" },
+  { s: "Have you 'ev-er 'been to Ja-*pan?", t: "rise" },
+  { s: "Would you 'like to 'come for *din-ner?", t: "rise" },
+  { s: "'Tell me a-'bout your *job.", t: "fall" },
+];

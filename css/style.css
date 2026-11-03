@@ -31,8 +31,6 @@ button { font: inherit; color: inherit; }
 #top { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .prog { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
 .prog i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
-.pts { color: var(--fg); font-weight: 700; min-width: 3ch; text-align: right; }
-.streak.hot { color: var(--accent); font-weight: 700; }
 
 #card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 28px 20px; margin: 16px 0 12px; min-height: 220px; }
 .ctx { color: var(--muted); margin-bottom: 10px; font-size: 15px; }
@@ -47,28 +45,10 @@ button { font: inherit; color: inherit; }
 .str { font-weight: 700; }
 .nuc { color: var(--accent); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
 .prompt i, .pat i { color: var(--muted); font-style: normal; margin: 0 1px; opacity: .6; }
-.opts { display: flex; gap: 8px; flex-wrap: wrap; }
-.opts.col { flex-direction: column; }
-.opt { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: transparent; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; text-align: left; }
-.opt:hover { border-color: var(--muted); }
-.opt.syl { font-size: 22px; }
-.opt.tune { flex: 1 1 150px; }
-.opt.tune .sym { font-size: 22px; color: var(--accent); min-width: 1.6em; }
-.opt.tune span:last-child { display: flex; flex-direction: column; line-height: 1.25; }
-.opt small { color: var(--muted); font-size: 12px; }
-.opt.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
-.opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
-.pat { font-size: 18px; letter-spacing: .01em; }
-.pat b { color: var(--accent); }
-.why { margin-top: 16px; font-size: 15px; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 10px; }
 .tag { display: inline-block; font-size: 14px; color: var(--accent); border: 1px solid var(--accent); border-radius: 99px; padding: 1px 10px; }
 
 #contour { width: 100%; height: 170px; display: block; background: var(--card); border: 1px solid var(--line); border-radius: 12px; transition: opacity .2s; }
 #contour.hidden-contour { opacity: 0.06; }
-#status { min-height: 52px; margin-top: 12px; font-size: 15px; color: var(--muted); }
-#status b.good, .good { color: var(--good); } #status b.bad, .bad { color: var(--bad); }
-.sc { font-size: 26px; margin-right: 4px; } .sc.ok { color: var(--accent); }
-.recording #contour { border-color: var(--bad); }
 .rec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); animation: pulse 1s infinite; vertical-align: middle; }
 @keyframes pulse { 50% { opacity: .3; } }
 
@@ -82,3 +62,43 @@ button { font: inherit; color: inherit; }
 #help > * { max-width: 620px; margin-left: auto; margin-right: auto; }
 #help table td { padding: 3px 12px 3px 0; }
 @media (max-width: 520px) { .prompt { font-size: 21px; } .prompt.big { font-size: 32px; } }
+
+/* ---- speaking coach ---- */
+.start { display: flex; align-items: center; gap: 14px; width: 100%; margin: 24px 0 8px; padding: 18px 20px; font-size: 20px; font-weight: 700;
+  background: var(--accent); color: #fff; border: 0; border-radius: 12px; cursor: pointer; text-align: left; }
+.start kbd { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.35); color: #fff; }
+.start small { margin-left: auto; font-weight: 400; font-size: 14px; opacity: .85; }
+.skills { display: grid; gap: 6px; }
+.skill { display: grid; grid-template-columns: 190px 1fr 64px; align-items: center; gap: 10px; font-size: 14px; }
+.skill em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.skill.weak span:first-child { color: var(--accent); font-weight: 700; }
+.skill.pending { opacity: .5; }
+.bar { display: block; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; background: var(--muted); }
+.bar.good i { background: var(--good); } .bar.ok i { background: var(--accent); } .bar.bad i { background: var(--bad); }
+.coachnote { margin: 14px 0; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; font-size: 15px; }
+#top .chip { color: var(--accent); font-weight: 700; }
+#top .reason { font-size: 13px; }
+.how { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+.tag.ghost { color: var(--muted); border-color: var(--line); margin-left: 6px; }
+#feedback { min-height: 60px; margin-top: 12px; }
+.listening { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.meter { flex: 0 0 160px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--bad); transition: width .05s; }
+.overall { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.overall b { font-size: 40px; font-variant-numeric: tabular-nums; line-height: 1; }
+.overall b.ok { color: var(--accent); }
+.dim { display: grid; grid-template-columns: 110px 1fr 40px minmax(0, 1.4fr); align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.dim.primary .dn { font-weight: 700; }
+.dim em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
+.dim .dd { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dim .tip { grid-column: 1 / -1; color: var(--fg); font-size: 14px; padding-left: 10px; border-left: 3px solid var(--accent); }
+#keys { margin-top: 10px; }
+#help ol { padding-left: 20px; }
+@media (max-width: 560px) {
+  .skill { grid-template-columns: 1fr 80px 56px; }
+  .dim { grid-template-columns: 90px 1fr 36px; } .dim .dd { grid-column: 1 / -1; }
+}
+
+.recording #contour { border-color: var(--bad); }
+.good { color: var(--good); } .bad { color: var(--bad); } .overall b.ok { color: var(--accent); }
