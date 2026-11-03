@@ -257,7 +257,7 @@
     const pts = []; for (let f = x.s; f <= x.e; f++) if (x.st[f] != null) pts.push([toT(f / 100), x.st[f] + tMed, f / 100]);
     const marks = det.map((d) => ({ t: toT(d.t), prom: d.prom, top: d === top }));
 
-    const res = { x, det, pts, marks, dims: {} };
+    const res = { x, det, pts, marks, dims: {}, toT, tMed };
     const words = c.words;
     const wordText = (wi) => (wi >= 0 ? words[wi].text.replace(/[^\w'’-]/g, "") : "?");
     const nucExp = exp.findIndex((s) => s.nuc);
@@ -268,8 +268,15 @@
     res.span = span;
     if (item.kind === "sentence") {
       const sc = clamp01((span - 3) / (8 - 3));
-      res.dims.range = { score: Math.round(sc * 100), detail: `${span.toFixed(1)} semitones`,
-        tip: sc < 0.6 ? `Your pitch range is narrow (${span.toFixed(1)} st). Exaggerate: jump up on the stressed words and drop lower at the end.` : sc < 0.9 ? "Decent range. Push the big pitch moves a bit further." : "" };
+      const tvs = [...tv].sort((a, b) => a - b);
+      const aimSpan = tvs[Math.floor(tvs.length * 0.92)] - tvs[Math.floor(tvs.length * 0.08)];
+      const usts = pts.map((p) => p[1]).sort((a, b) => a - b);
+      res.range = { you: [usts[Math.floor(usts.length * 0.08)], usts[Math.floor(usts.length * 0.92)]], aim: [tvs[Math.floor(tvs.length * 0.08)], tvs[Math.floor(tvs.length * 0.92)]] };
+      const nw = wordText(exp[nucExp].wi);
+      const end = { fall: "drop all the way down at the end", rise: "glide all the way up at the end", fallrise: "dip low, then curl back up", risefall: "swoop up high, then drop" }[c.tune];
+      res.dims.range = { score: Math.round(sc * 100), detail: `you ${span.toFixed(1)} · aim 7+ semitones`,
+        tip: sc < 0.6 ? `Your voice moved only ${span.toFixed(1)} semitones (aim for 7+, ${span < 1.5 ? "several times" : `about ${(7 / span).toFixed(1).replace(/\.0$/, "")}×`} as much). Jump clearly higher on “${nw}”, then ${end}. Think “telling exciting news”, not “reading a list”.`
+          : sc < 0.9 ? `${span.toFixed(1)} semitones: close. Make the jump on “${nw}” a bit bigger.` : "" };
     }
 
     // ---- word stress
@@ -340,7 +347,7 @@
         const ti = TUNE_INFO[c.tune];
         const want = { fall: "fall clearly", rise: "rise at the end", fallrise: "fall, then rise again at the very end", risefall: "go up and then fall steeply" }[c.tune];
         res.dims.melody = { score, detail: `${ti.sym} you ${dir}`,
-          tip: sh < 0.6 ? `From “${wordText(nd.wi)}” onward your pitch ${dir}. It should ${want} (${ti.name.toLowerCase()}).` : sh < 0.9 ? `Right shape. Make the ${ti.name.toLowerCase()} bigger.` : "" };
+          tip: sh < 0.6 ? (({ fall: "fell", rise: "rose", fallrise: "fell then rose", risefall: "rose then fell" })[c.tune] === dir ? `Right direction, but too small. From “${wordText(nd.wi)}” onward, make it a big, obvious ${ti.name.toLowerCase()}: ${want}.` : `From “${wordText(nd.wi)}” onward your pitch ${dir}. It should ${want} (${ti.name.toLowerCase()}).`) : sh < 0.9 ? `Right shape. Make the ${ti.name.toLowerCase()} bigger.` : "" };
       }
     }
 
@@ -355,8 +362,13 @@
       const sc = 0.6 * clamp01((ratio - 1.05) / 0.55) + 0.4 * clamp01((dbd - 0.5) / 3.5);
       const rate = det.length / (x.t1 - x.t0);
       let tip = "";
-      if (sc < 0.6) tip = ratio < 1.3 ? "Your syllables are too even. Stretch the stressed ones (bold) and squeeze the small words (a, the, to, of, for…)." : "Make the stressed syllables louder than the weak ones.";
-      else if (sc < 0.9) tip = "Good. Squeeze the weak syllables even more.";
+      const strong = exp.filter((s) => s.stress).map((s) => s.t.replace(/[^\w'’]/g, "").toUpperCase());
+      const small = [...new Set(words.filter((w) => !w.syls.some((s) => s.stress)).map((w) => w.text.replace(/[^\w'’]/g, "").toLowerCase()))].slice(0, 4);
+      const smallTxt = small.length ? `rush through “${small.join("”, “")}”` : "squeeze the unstressed syllables";
+      if (sc < 0.6) tip = ratio < 1.3
+        ? `Your syllables were all about the same length: stressed ones only ${ratio.toFixed(1)}× the weak ones (aim for 1.6×+). Stretch ${strong.join(" · ")} and ${smallTxt}. Compare the two rows of boxes below.`
+        : `Length is OK; now make ${strong.join(" · ")} louder and keep ${small.length ? `“${small.join("”, “")}”` : "the rest"} quiet.`;
+      else if (sc < 0.9) tip = `Nearly there (${ratio.toFixed(1)}×). Squeeze ${small.length ? `“${small.join("”, “")}”` : "the weak syllables"} even more.`;
       if (rate < 2.6 && sc < 0.9) tip += " You're also speaking slowly. Rush through the weak syllables.";
       res.dims.rhythm = { score: Math.round(sc * 100), detail: `stressed ${ratio.toFixed(1)}× longer`, tip };
     }

@@ -184,7 +184,7 @@
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
     if (!c) return;
-    const padL = 12, padR = 12, padT = opts.marks ? 30 : 14, padB = 30;
+    const padL = 12, padR = opts.range ? 52 : 12, padT = opts.marks ? 30 : 14, padB = 30;
     const lo = -6, hi = 9;
     const X = (t) => padL + (t / c.total) * (W - padL - padR);
     const Y = (st) => padT + (1 - (st - lo) / (hi - lo)) * (H - padT - padB);
@@ -214,6 +214,18 @@
     if (opts.user && opts.user.length) {
       g.fillStyle = css("--user");
       opts.user.forEach(([t, st]) => { g.beginPath(); g.arc(X(t), Y(Math.max(lo, Math.min(hi, st))), 2.6, 0, 7); g.fill(); });
+    }
+    // pitch range brackets: the target's span vs yours
+    if (opts.range) {
+      const br = (x0, [lo2, hi2], col, label) => {
+        const a = Y(Math.min(hi, hi2)), b = Y(Math.max(lo, lo2));
+        g.strokeStyle = col; g.lineWidth = 3; g.lineCap = "butt";
+        g.beginPath(); g.moveTo(x0, a); g.lineTo(x0, b); g.moveTo(x0 - 4, a); g.lineTo(x0 + 4, a); g.moveTo(x0 - 4, b); g.lineTo(x0 + 4, b); g.stroke();
+        g.fillStyle = col; g.font = "600 10px ui-sans-serif, system-ui, sans-serif"; g.textAlign = "center";
+        g.fillText(label, x0, H - 9);
+      };
+      br(W - 38, opts.range.aim, css("--target"), "aim");
+      br(W - 16, opts.range.you, css("--user"), "you");
     }
     // live loudness trace along the bottom (peaks = where your stresses are)
     if (opts.energy && opts.energy.length) {

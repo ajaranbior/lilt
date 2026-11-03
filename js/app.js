@@ -67,12 +67,12 @@
     const it = S.item, cv = $("#contour");
     const hide = it.challenge && !S.result;
     cv.classList.toggle("hidden-contour", !!hide);
-    P.draw(cv, it.contour, { user: S.result && S.result.pts, marks: S.result && S.result.marks, ...extra });
+    P.draw(cv, it.contour, { user: S.result && S.result.pts, marks: S.result && S.result.marks, range: S.result && S.result.range, ...extra });
   }
 
   function keys(html) { $("#keys").innerHTML = html; }
   const K_IDLE = `<kbd>Space</kbd> speak &nbsp; <kbd>M</kbd> model hum &nbsp; <kbd>T</kbd> natural voice &nbsp; <kbd>Enter</kbd> skip &nbsp; <kbd>Esc</kbd> menu`;
-  const K_DONE = `<kbd>Space</kbd> try again &nbsp; <kbd>Enter</kbd> next &nbsp; <kbd>P</kbd> hear yourself &nbsp; <kbd>M</kbd> model &nbsp; <kbd>T</kbd> voice`;
+  const K_DONE = `<kbd>F</kbd> <b>hear it fixed</b> &nbsp; <kbd>P</kbd> hear yourself &nbsp; <kbd>Space</kbd> try again &nbsp; <kbd>Enter</kbd> next &nbsp; <kbd>M</kbd> model`;
 
   // ---------- flow ----------
   function startSession() {
@@ -169,7 +169,7 @@
     const r = Analyze.analyze(rec.samples, rec.sr, S.item);
     if (r.error) { $("#feedback").innerHTML = `<p class="bad">${esc(r.error)}</p>`; keys(K_IDLE); return; }
     S.attempts++;
-    S.result = r;
+    S.result = r; S.fixed = null;
     renderCard(); drawContour();
     const dims = r.dims;
     if (rec.recognition) dims.clarity = { score: null, pending: true };
@@ -207,10 +207,34 @@
     const ov = overall ?? C.overall(S.item, dims);
     const ovc = ov >= 80 ? "good" : ov >= 55 ? "ok" : "bad";
     $("#feedback").innerHTML = `
-      <div class="overall"><b class="${ovc}">${ov ?? "–"}</b><span>${ov >= 85 ? "Great!" : ov >= 65 ? "Getting there" : "Try again: listen to the model first (M)"}${S.attempts > 1 ? ` · attempt ${S.attempts}` : ""}</span></div>
+      <div class="overall"><b class="${ovc}">${ov ?? "–"}</b><span>${ov >= 85 ? "Great!" : ov >= 65 ? "Getting there." : "Not yet."}
+        ${ov < 85 ? ` Press <kbd>F</kbd> to hear <b>your own voice</b> with the fix applied, then copy it.` : ""}${S.attempts > 1 ? ` · attempt ${S.attempts}` : ""}</span></div>
+      ${rhythmStrip()}
       ${rows.map(([d, v]) => `<div class="dim ${C.skillOf(S.item, d) === S.item.primary ? "primary" : ""}">
         <span class="dn">${DIM_NAMES[d]}</span>${v.pending ? `<span class="muted">checking…</span>` : `${bar(v.score ?? 0)}<em>${v.score ?? "–"}</em>`}
         <span class="dd">${esc(v.detail || "")}</span>${v.tip ? `<div class="tip">${esc(v.tip)}</div>` : ""}</div>`).join("")}`;
+  }
+
+  // target vs actual syllable lengths, side by side
+  function rhythmStrip() {
+    const r = S.result, it = S.item;
+    if (!r || !r.dims.rhythm) return "";
+    const exp = it.contour.syls;
+    const want = exp.map((s, i) => (s.nuc ? 0.3 : s.stress ? 0.22 : 0.12) + (i === exp.length - 1 ? 0.04 : 0));
+    const got = exp.map((_, j) => r.det.filter((d) => d.exp === j).reduce((a, d) => a + d.dur * (j === exp.length - 1 ? 0.8 : 1), 0));
+    const row = (vals, cls) => {
+      const tot = vals.reduce((a, b) => a + b, 0) || 1;
+      return `<div class="rrow ${cls}">${exp.map((s, j) => `<span class="${s.nuc ? "n" : s.stress ? "s" : "u"}" style="flex:${(vals[j] / tot) * 100} 0 0">${vals[j] / tot > 0.05 ? esc(s.stress ? s.t.toUpperCase() : s.t) : ""}</span>`).join("")}</div>`;
+    };
+    return `<div class="rstrip"><div><small>aim</small>${row(want, "aim")}</div><div><small>you</small>${row(got, "you")}</div></div>`;
+  }
+
+  function playFixed() {
+    if (!S.rec || !S.result) return;
+    clearTimeout(S.auto);
+    try { S.fixed ||= Resynth.fix(S.rec.samples, S.rec.sr, S.result, S.item); }
+    catch (e) { console.error(e); return; }
+    Mic.play(S.fixed, S.rec.sr);
   }
 
   function endSession() {
@@ -274,6 +298,7 @@
     }
     if (k === "m") { clearTimeout(S.auto); playModel(); return; }
     if (k === "t") { clearTimeout(S.auto); P.say(S.item.text); return; }
+    if (k === "f") { playFixed(); return; }
     if (k === "p" && S.rec) { clearTimeout(S.auto); Mic.play(S.rec.samples, S.rec.sr); return; }
   });
 

@@ -51,6 +51,7 @@
       <li>The model hum plays first (<kbd>M</kbd> replays it). The grey line is the melody to copy.</li>
       <li>Press <kbd>Space</kbd> and say it. Recording stops on its own when you pause. Messed up? Press <kbd>Space</kbd> again to restart.</li>
       <li>Your pitch appears as blue dots. The circles along the top show where your stresses landed, and the filled one is your strongest.</li>
+      <li>Press <kbd>F</kbd> to hear <b>your own voice with the fix applied</b>, then <kbd>P</kbd> to hear how you actually said it. Copy the fixed version.</li>
       <li><kbd>Space</kbd> to retry, <kbd>Enter</kbd> for the next phrase.</li>
     </ol>
     <h3>Reading the screen</h3>
@@ -62,6 +63,8 @@
       <li><b style="color:var(--user)">Circles along the top</b>: one per syllable Lilt heard. Bigger means that syllable stood out more (louder, longer, more pitch movement).
         The <b>filled</b> circle is your strongest one. It should sit above the orange segment.</li>
       <li><b style="color:var(--user)">Faint bars along the bottom</b> (while recording): your loudness. Each peak is a syllable you stressed, so you can see your rhythm as you speak.</li>
+      <li><b>Brackets at the right</b>: how far your pitch moved (<span style="color:var(--user)">you</span>) compared with the target (aim). If yours is shorter, exaggerate more.</li>
+      <li><b>Two rows of boxes</b> (rhythm): the target length of each syllable vs yours. Native English has big boxes for stressed syllables and tiny ones for the rest. If your boxes are all the same size, your rhythm is too even.</li>
       <li><b>Scores</b>: each line is one skill (melody, main stress, rhythm…). The bold line is the skill this phrase is training. Read the tip under it.</li>
     </ul>
     <h3>The four tunes</h3>
@@ -78,7 +81,8 @@
       <tr><td><kbd>Enter</kbd> / <kbd>→</kbd></td><td>next phrase</td></tr>
       <tr><td><kbd>M</kbd></td><td>model hum (melody only)</td></tr>
       <tr><td><kbd>T</kbd></td><td>natural voice (text-to-speech; its melody may differ)</td></tr>
-      <tr><td><kbd>P</kbd></td><td>play back your recording</td></tr>
+      <tr><td><kbd>F</kbd></td><td><b>hear it fixed</b>: your own recording, re-shaped with the target melody, rhythm and stress</td></tr>
+      <tr><td><kbd>P</kbd></td><td>play back your recording as you said it</td></tr>
       <tr><td><kbd>G</kbd></td><td>show / hide the legend under the chart</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>menu</td></tr>
     </table>
@@ -92,6 +96,7 @@
 <script src="js/data.js"></script>
 <script src="js/prosody.js"></script>
 <script src="js/analyze.js"></script>
+<script src="js/resynth.js"></script>
 <script src="js/mic.js"></script>
 <script src="js/coach.js"></script>
 <script src="js/app.js"></script>
