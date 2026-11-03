@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lilt — prosody drills</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <section id="home">
+    <header>
+      <h1>lilt<span>↗↘</span></h1>
+      <p class="muted">Fast keyboard drills for English stress, rhythm and intonation.</p>
+    </header>
+    <div id="modes"></div>
+    <p class="keys">
+      <kbd>1</kbd>–<kbd>6</kbd> start &nbsp;
+      <kbd>V</kbd> hum voice: <b id="voice">low</b> &nbsp;
+      <kbd>A</kbd> auto-advance: <b id="auto">on</b> &nbsp;
+      <kbd>?</kbd> help
+    </p>
+  </section>
+
+  <section id="drill" hidden>
+    <div id="top"></div>
+    <div id="card"></div>
+    <canvas id="contour"></canvas>
+    <div id="status"></div>
+  </section>
+
+  <section id="end" hidden></section>
+
+  <aside id="help" hidden>
+    <h2>How it works</h2>
+    <p>English melody hangs on <b>stressed syllables</b>. The biggest one in a phrase is the
+      <span class="nuc">nucleus</span>: that's where the tune (fall, rise, …) starts, and everything after it is the
+      <i>tail</i>, which just carries the tune through to the end.</p>
+    <p>The <b>hum</b> strips the words away so you hear only the melody and rhythm: thick and loud means stressed,
+      thin means unstressed. The line shows the same pitch you hear.</p>
+    <table>
+      <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>answer</td></tr>
+      <tr><td><kbd>Space</kbd></td><td>play / replay the hum</td></tr>
+      <tr><td><kbd>Enter</kbd> / <kbd>→</kbd></td><td>next</td></tr>
+      <tr><td><kbd>T</kbd></td><td>natural voice (text-to-speech)</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Tune mode: hear the tune you picked</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Shadow mode: record / stop</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>back to menu</td></tr>
+    </table>
+    <p class="muted">Shadow tip: hum the melody first (“mm-MM-mm”), then say the words with the same melody.
+      Exaggerate — learners almost always use too little pitch range.</p>
+    <p class="keys"><kbd>?</kbd> or <kbd>Esc</kbd> to close</p>
+  </aside>
+</main>
+<script src="js/data.js"></script>
+<script src="js/prosody.js"></script>
+<script src="js/pitch.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
