@@ -60,6 +60,7 @@
       <div class="prompt ${it.kind === "word" ? "big" : ""} words">${sentenceHTML(it, hide)}</div>
       ${ti ? `<div class="tune"><span class="tag">${ti.sym} ${ti.name}</span><span>${esc(ti.how)} <span class="muted">${esc(ti.means)}</span></span></div>` : ""}
       ${hide ? `<span class="tag ghost">from memory: you've mastered this</span>` : ""}
+      ${it.real ? `<p class="credit">Real recording: <a href="https://tatoeba.org/sentences/show/${it.real.sid}" target="_blank" rel="noopener">Tatoeba #${it.real.sid}</a> by CK · <a href="https://creativecommons.org/licenses/by-nc-nd/3.0/" target="_blank" rel="noopener">CC BY-NC-ND 3.0</a></p>` : ""}
       ${it.primary.startsWith("melody:") ? "" : `<p class="how">${esc(C.SKILLS[it.primary].how)}</p>`}`;
   }
 
@@ -173,10 +174,17 @@
   }
   function stopLive() { liveId++; }
 
-  function finish(rec) {
+  async function finish(rec) {
     S.rec = rec;
     if (!rec.heard) { $("#feedback").innerHTML = `<p class="bad">I didn't hear anything. Check your mic and speak up a bit.</p>`; keys(K_IDLE); return; }
-    const r = Analyze.analyze(rec.samples, rec.sr, S.item);
+    const item = S.item;
+    let r = null;
+    if (item.real) { // mirror: align your attempt to the speaker's recording and compare
+      try { const m = await Voice.model(item); const syl = m && Align.userSyllables(rec.samples, rec.sr, m); if (syl) r = Analyze.mirror(rec.samples, rec.sr, item, syl); }
+      catch (e) { console.error(e); }
+      if (S.item !== item) return;
+    }
+    if (!r) r = Analyze.analyze(rec.samples, rec.sr, item);
     if (r.error) { $("#feedback").innerHTML = `<p class="bad">${esc(r.error)}</p>`; keys(K_IDLE); return; }
     S.attempts++;
     S.result = r; S.fixed = null;
@@ -230,7 +238,8 @@
     const r = S.result, it = S.item;
     if (!r || !r.dims.rhythm) return "";
     const exp = it.contour.syls;
-    const want = exp.map((s, i) => (s.nuc ? 0.3 : s.stress ? 0.22 : 0.12) + (i === exp.length - 1 ? 0.04 : 0));
+    // real recordings: the speaker's own syllable lengths; otherwise the idealised pattern
+    const want = it.real ? exp.map((s) => s.dur) : exp.map((s, i) => (s.nuc ? 0.3 : s.stress ? 0.22 : 0.12) + (i === exp.length - 1 ? 0.04 : 0));
     const got = exp.map((_, j) => r.det.filter((d) => d.exp === j).reduce((a, d) => a + d.dur * (j === exp.length - 1 ? 0.8 : 1), 0));
     const row = (vals, cls) => {
       const tot = vals.reduce((a, b) => a + b, 0) || 1;

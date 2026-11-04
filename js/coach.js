@@ -52,19 +52,42 @@
     return { kind: "word", id: "w:" + e, primary, contour: P.contour(words, "fall", { rate: 0.85 }), words, text: w.text, hint: w.hint, stressIdx: w.idx, ctx: w.hint ? `(${w.hint})` : "" };
   }
 
+  // A real recording: the contour is replaced by the speaker's actual timing and pitch.
+  let REAL = [];
+  function realItem(e, primary) {
+    const it = sentenceItem({ s: e.markup, t: e.tune, ctx: "Mirror a real speaker: copy their melody, stress and timing." }, primary);
+    it.id = e.id; it.real = e;
+    const c = it.contour, z = e.syl[0][0] - 0.05;
+    c.syls.forEach((s, j) => { const [a, b] = e.syl[j]; s.start = a - z; s.dur = b - a; s.pts = (e.pts[j] || []).map(([t, v]) => [t + 0.05, v]); });
+    c.syls.forEach((s, j) => { // syllables without pitch (voiceless): bridge from the neighbours
+      if (s.pts.length >= 2) return;
+      let p = j - 1; while (p >= 0 && c.syls[p].pts.length < 2) p--;
+      let n = j + 1; while (n < c.syls.length && c.syls[n].pts.length < 2) n++;
+      const v0 = p >= 0 ? c.syls[p].pts[c.syls[p].pts.length - 1][1] : n < c.syls.length ? c.syls[n].pts[0][1] : 0;
+      const v1 = n < c.syls.length ? c.syls[n].pts[0][1] : v0;
+      s.pts = [[s.start, v0], [s.start + s.dur, v1]];
+    });
+    const L = c.syls[c.syls.length - 1];
+    c.total = L.start + L.dur + 0.05;
+    return it;
+  }
+  C._realItem = (e) => realItem(e, "melody:" + e.tune);
+  C.addReal = (list) => { REAL = list.filter((e) => e.syl && e.pts && e.syl.length === Prosody.parse(e.markup).reduce((a, w) => a + w.syls.length, 0)); };
+  const realPool = (skill, keep) => REAL.filter(keep).map((e) => () => realItem(e, skill));
+
   const FOCUS_ITEMS = []; FOCUS.forEach((g) => g.items.forEach(([q, f]) => FOCUS_ITEMS.push({ s: g.s, q, f, t: "fall" })));
   const sylCount = (s) => P.parse(s.s).reduce((a, w) => a + w.syls.length, 0);
   const ALL_SENT = [...TUNES, ...RHYTHM];
 
   function pool(skill) {
-    if (skill.startsWith("melody:")) { const t = skill.split(":")[1]; return ALL_SENT.filter((x) => x.t === t).map((x) => () => sentenceItem(x, skill)); }
+    if (skill.startsWith("melody:")) { const t = skill.split(":")[1]; return [...ALL_SENT.filter((x) => x.t === t).map((x) => () => sentenceItem(x, skill)), ...realPool(skill, (e) => e.tune === t)]; }
     if (skill === "focus:early" || skill === "focus:late") {
-      return [...FOCUS_ITEMS, ...(skill === "focus:late" ? RHYTHM : [])].map((x) => () => sentenceItem(x, skill)).filter((mk) => mk().focusKind === skill);
+      return [...[...FOCUS_ITEMS, ...(skill === "focus:late" ? RHYTHM : [])].map((x) => () => sentenceItem(x, skill)), ...realPool(skill, () => true)].filter((mk) => mk().focusKind === skill);
     }
     if (skill === "wordstress") return WORDS.map((e) => () => wordItem(e, skill));
-    if (skill === "rhythm") return ALL_SENT.filter((x) => sylCount(x) >= 6).map((x) => () => sentenceItem(x, skill));
-    if (skill === "range") return TUNES.filter((x) => x.t !== "fall").map((x) => () => sentenceItem(x, skill));
-    return [...ALL_SENT, ...FOCUS_ITEMS].map((x) => () => sentenceItem(x, skill));
+    if (skill === "rhythm") return [...ALL_SENT.filter((x) => sylCount(x) >= 6).map((x) => () => sentenceItem(x, skill)), ...realPool(skill, (e) => e.syl.length >= 6)];
+    if (skill === "range") return [...TUNES.filter((x) => x.t !== "fall").map((x) => () => sentenceItem(x, skill)), ...realPool(skill, (e) => e.span >= 6)];
+    return [...ALL_SENT, ...FOCUS_ITEMS].map((x) => () => sentenceItem(x, skill)).concat(realPool(skill, () => true));
   }
 
   // ---------- choosing ----------
@@ -82,8 +105,11 @@
     lastSkills.push(skill);
     const mks = pool(skill).map((mk) => mk());
     const fresh = mks.filter((it) => !recent.includes(it.id));
-    const list = fresh.length ? fresh : mks;
-    const w = list.map((it) => { const h = itemHist[it.id]; return h == null ? 1.5 : 1 + (100 - h) / 30; });
+    let list = fresh.length ? fresh : mks;
+    // 60% real recordings, 40% written phrases (those carry specific contexts and tunes)
+    const realOnes = list.filter((it) => it.real), written = list.filter((it) => !it.real);
+    if (realOnes.length && written.length) list = Math.random() < 0.6 ? realOnes : written;
+    const w = list.map((it) => { const h = itemHist[it.id]; return (h == null ? 1.5 : 1 + (100 - h) / 30) ; });
     let r = Math.random() * w.reduce((a, b) => a + b, 0), i = 0;
     while ((r -= w[i]) > 0 && i < list.length - 1) i++;
     const item = list[i];
@@ -128,7 +154,7 @@
   // Every item the coach can serve (used by tools/voices to pre-record model audio).
   C.allItems = function () {
     const out = new Map();
-    ORDER.forEach((k) => pool(k).forEach((mk) => { const it = mk(); if (!out.has(it.id)) out.set(it.id, it); }));
+    ORDER.forEach((k) => pool(k).forEach((mk) => { const it = mk(); if (!it.real && !out.has(it.id)) out.set(it.id, it); }));
     return [...out.values()];
   };
 

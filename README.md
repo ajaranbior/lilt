@@ -61,6 +61,10 @@ Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
 - `js/mic.js`: capture with voice-activity auto-stop, plus optional Web Speech recognition.
 - `js/resynth.js`: "hear it fixed". TD-PSOLA re-synthesis of your recording: pitch re-shaped to the target tune
   around your own voice level, stressed syllables stretched and weak ones squeezed, stresses made louder.
+- `js/real.js`, `js/align.js` + `audio/real/`: **mirror items**, 449 sentences recorded by a real native speaker
+  (Tatoeba, user CK). The target line is their actual pitch. Your attempt is aligned to their recording sound by
+  sound (MFCC + dynamic time warping) and compared syllable by syllable: pitch shape, ending, which syllables stand
+  out, timing and range. See `tools/real/README.md`.
 - `js/voice.js` + `audio/`: the model voice, a natural neural voice (Kokoro) recorded offline for every phrase and
   prosody-corrected to the target. To rebuild it after adding content, see `tools/voices/README.md`.
 - `js/data.js` + `js/bank.js`: about 290 words, 70 focus answers, 60 tune phrases and 50 rhythm sentences. Add your own: `I 'left my 'keys in the *kitch-en.`
@@ -70,5 +74,10 @@ Limits: the analysis is a heuristic, not a trained model. It judges prosody (mel
 vowel and consonant sounds. Use headphones or a quiet room for the most reliable results.
 
 ## Credits
+
+Real recordings: [Tatoeba](https://tatoeba.org), recordings by user CK,
+[CC BY-NC-ND 3.0](https://creativecommons.org/licenses/by-nc-nd/3.0/) (non-commercial, unmodified, attributed in the app).
+These have to be removed if the app is ever used commercially.
+Dictionary: [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict) (build time only).
 
 Model voices: [Kokoro-82M](https://github.com/hexgrad/kokoro) by hexgrad (Apache-2.0), voices `af_heart` and `am_michael`.

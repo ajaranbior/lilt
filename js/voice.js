@@ -6,18 +6,32 @@
 
   V.ready = fetch("audio/manifest.json").then((r) => (r.ok ? r.json() : null)).then((m) => { manifest = m; }).catch(() => {});
   V.voice = () => Coach.store.get("voice", "f");
-  V.has = (item) => !!(manifest && manifest.items[item.id] && manifest.items[item.id][V.voice()] != null);
+  V.has = (item) => !!item.real || !!(manifest && manifest.items[item.id] && manifest.items[item.id][V.voice()] != null);
 
   V.buffer = function (item) {
-    const vk = V.voice(), key = vk + "|" + item.id;
+    const vk = item.real ? "real" : V.voice(), key = vk + "|" + item.id;
     if (!cache.has(key)) {
-      const p = fetch(`audio/${vk}/${manifest.items[item.id].file}.mp3`)
+      const url = item.real ? `audio/real/${item.real.aid}.mp3` : `audio/${vk}/${manifest.items[item.id].file}.mp3`;
+      const p = fetch(url)
         .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then((b) => Prosody.audio().decodeAudioData(b));
       p.catch(() => cache.delete(key));
       cache.set(key, p);
     }
     return cache.get(key);
+  };
+  // the speaker's recording with its syllable times, for aligning the learner's attempt to it
+  const models = new Map();
+  V.model = async function (item) {
+    if (!item.real) return null;
+    if (models.has(item.id)) return models.get(item.id);
+    const buf = await V.buffer(item);
+    const samples = buf.getChannelData(0), sr = buf.sampleRate;
+    const x = Analyze.extract(samples, sr);
+    const sh = x ? x.t0 - item.real.t0 : 0; // decoders can shift MP3 audio slightly
+    const m = { samples, sr, syl: item.real.syl.map(([a, b]) => ({ a: a + sh, b: b + sh })) };
+    models.set(item.id, m);
+    return m;
   };
   V.prefetch = (item) => { if (V.has(item)) V.buffer(item).catch(() => {}); };
 

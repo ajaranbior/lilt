@@ -1,0 +1,9 @@
+{
+  "name": "lilt-real-voices",
+  "private": true,
+  "description": "Build tool: turns Tatoeba recordings into Lilt mirror items",
+  "dependencies": {
+    "cmu-pronouncing-dictionary": "3.0.0",
+    "hyphen": "1.10.6"
+  }
+}

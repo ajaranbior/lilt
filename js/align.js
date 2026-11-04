@@ -1,5 +1,3 @@
-// EXPERIMENTAL, not loaded by the app yet: aligning learner speech to the model voice is accurate
-// (median syllable-boundary error ~15–20 ms), but stress judgement on top of it needs more work.
 // Align a learner's recording to the model recording of the same phrase, sound by sound:
 // MFCC features + dynamic time warping. The model's known syllable boundaries are then
 // carried over to the learner's audio, so every syllable is measured where it really is.

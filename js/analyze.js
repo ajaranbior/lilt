@@ -443,6 +443,67 @@
     return res;
   };
 
+  // ---------- mirror scoring: compare with a real speaker, syllable by syllable ----------
+  // item.real = { prom: [speaker prominence per syllable], ... }; item.contour holds the speaker's pitch.
+  // syl = the learner's syllable spans (from aligning their recording to the speaker's).
+  const corr = (xs, ys) => {
+    const n = xs.length; if (n < 3) return 0;
+    const mx = mean(xs), my = mean(ys); let a = 0, b = 0, c = 0;
+    for (let i = 0; i < n; i++) { a += (xs[i] - mx) * (ys[i] - my); b += (xs[i] - mx) ** 2; c += (ys[i] - my) ** 2; }
+    return b && c ? a / Math.sqrt(b * c) : 0;
+  };
+  A.mirror = function (samples, sr, item, syl) {
+    const r = A.analyze(samples, sr, item, { syl });
+    if (r.error) return r;
+    const c = item.contour, exp = c.syls, words = c.words, real = item.real;
+    const wordText = (wi) => words[wi].text.replace(/[^\w'’-]/g, "");
+    const dims = {};
+    // melody: your pitch curve against theirs (same time axis), plus the direction of the ending
+    const pairs = []; r.pts.forEach(([t, st]) => { const v = Prosody.valueAt(c, t); if (v != null) pairs.push([v, st]); });
+    const rc = corr(pairs.map((p) => p[0]), pairs.map((p) => p[1]));
+    const nucJ = exp.findIndex((x) => x.nuc), tEnd = exp[exp.length - 1].start + exp[exp.length - 1].dur;
+    const tail = (arr) => { const n = arr.length; if (n < 4) return 0; const k = Math.max(2, Math.floor(n / 3)); return mean(arr.slice(n - k)) - mean(arr.slice(0, k)); };
+    const theirs = exp.slice(nucJ).flatMap((x) => x.pts.map((p) => p[1]));
+    const yours = r.pts.filter(([t]) => t >= exp[nucJ].start && t <= tEnd + 0.2).map((p) => p[1]);
+    const dT = tail(theirs), dY = tail(yours);
+    const same = yours.length >= 4 && Math.sign(dT) === Math.sign(dY) && Math.abs(dY) >= Math.min(2, Math.abs(dT) * 0.5);
+    const dir = (d) => (d > 1 ? "up" : d < -1 ? "down" : "flat");
+    const msc = Math.round(100 * (0.6 * clamp01((rc - 0.3) / 0.55) + 0.4 * (same ? 1 : 0)));
+    dims.melody = { score: msc, detail: `match ${Math.round(Math.max(0, rc) * 100)}% · end ${dir(dY)}`,
+      tip: !same && yours.length >= 4 ? `After “${wordText(exp[nucJ].wi)}” their voice goes ${dir(dT)}; yours went ${dir(dY)}. Listen again (M) and copy the ending.`
+        : msc < 70 ? "Your pitch shape differs from theirs. Listen (M), then copy where their voice goes high and where it drops." : "" };
+    // stress: do the same syllables stand out?
+    const up = exp.map((_, j) => { const d = r.det.find((q) => q.exp === j); return d ? d.prom : null; });
+    const idx = exp.map((_, j) => j).filter((j) => up[j] != null && real.prom[j] != null);
+    const pc = corr(idx.map((j) => real.prom[j]), idx.map((j) => up[j]));
+    const topWord = (pr) => { let bj = idx[0]; idx.forEach((j) => { if (pr[j] > pr[bj]) bj = j; }); return exp[bj].wi; };
+    const wT = exp[nucJ].wi;
+    // same rule as when the speaker's main stress was measured: near-ties go to their main word
+    const maxY = Math.max(...idx.map((j) => up[j])), onT = Math.max(...idx.filter((j) => exp[j].wi === wT).map((j) => up[j]), -Infinity);
+    const wY = onT >= maxY - 0.35 ? wT : topWord(up);
+    const ssc = Math.round(100 * (0.5 * clamp01((pc - 0.1) / 0.6) + 0.5 * (wY === wT ? 1 : 0)));
+    dims.focus = { score: ssc, detail: `your peak: ${wordText(wY)}`,
+      tip: wY !== wT ? `Their main stress is on “${wordText(wT)}”; yours was on “${wordText(wY)}”.` : ssc < 70 ? "Right main word. Now match which other syllables are strong and which are weak." : "" };
+    // rhythm: long and short syllables in the same places
+    if (exp.length >= 4) {
+      const dj = exp.map((_, j) => j).filter((j) => r.det.find((q) => q.exp === j));
+      const rr = corr(dj.map((j) => Math.log(exp[j].dur)), dj.map((j) => Math.log(r.det.find((q) => q.exp === j).dur)));
+      const rsc = Math.round(100 * clamp01((rr - 0.2) / 0.6));
+      const longest = dj.reduce((a, j) => (exp[j].dur > exp[a].dur ? j : a), dj[0]);
+      dims.rhythm = { score: rsc, detail: `timing match ${Math.round(Math.max(0, rr) * 100)}%`,
+        tip: rsc < 70 ? `Copy their timing: they stretch “${exp[longest].t.replace(/[^\w'’]/g, "")}” and rush the small words.` : "" };
+    }
+    // range: your pitch span against theirs
+    const tv = exp.flatMap((x) => x.pts.map((p) => p[1])).sort((a, b) => a - b);
+    const theirSpan = tv[Math.floor(tv.length * 0.92)] - tv[Math.floor(tv.length * 0.08)];
+    const ratio = r.span / (theirSpan || 1);
+    dims.range = { score: Math.round(100 * clamp01((ratio - 0.4) / 0.45)), detail: `you ${r.span.toFixed(1)} · them ${theirSpan.toFixed(1)} semitones`,
+      tip: ratio < 0.85 ? `Their voice moves ${theirSpan.toFixed(0)} semitones; yours moved ${r.span.toFixed(0)}. Go higher on the stressed words and lower at the end.` : "" };
+    r.dims = dims;
+    r.mirror = true;
+    return r;
+  };
+
   // ---------- word-level comparison for recognized speech ----------
   // Recognizers write numbers as digits ("10") and may pick US or UK spellings; normalize both sides.
   const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",

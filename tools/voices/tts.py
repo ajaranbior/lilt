@@ -7,6 +7,7 @@ import numpy as np, onnxruntime as ort, soundfile as sf
 from kokoro_onnx import Kokoro
 work, model, voices = sys.argv[1:4]
 VOICES = {"f": "af_heart", "m": "am_michael"}
+if len(sys.argv) > 4: VOICES = {k: v for k, v in VOICES.items() if k in sys.argv[4]}  # e.g. "f" = female only
 SR, HOP = 24000, 600  # Kokoro: 24 kHz, one duration frame = 600 samples (25 ms)
 k = Kokoro(model, voices)  # only used for its phonemizer/tokenizer and voice styles
 sess = ort.InferenceSession(model)
