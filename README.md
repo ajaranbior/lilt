@@ -36,7 +36,11 @@ The first ~10 phrases are a placement check covering every skill. After that, ea
 with the lowest score, with some variety. Your profile and per-phrase history are saved in `localStorage`
 (this browser only). Once a skill is mastered (85+), its stress marks are hidden, so you produce the stress from memory.
 
-## Keys
+## Keys and touch
+
+Everything works by keyboard or by tapping. On a phone, a bar at the bottom holds a big button for the next step
+(**Speak**, then **Finish**, then **Next**) plus the other actions. Every key hint on the desktop is clickable too.
+
 
 `Space` speak / restart while recording / retry · `Enter` finish recording or next phrase · `F` hear it fixed · `M` model voice · `H` hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
 Menu: `M` auto-play model · `N` auto-next on 85+ · `V` female/male model voice · `R` clarity check · `X` reset profile

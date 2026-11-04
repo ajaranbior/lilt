@@ -18,11 +18,11 @@
     <button id="start" class="start"><kbd>Space</kbd> Start a session <small>10 phrases · about 3 minutes</small></button>
     <div id="profile"></div>
     <p class="keys">
-      <kbd>M</kbd> play model first: <b id="o-model">on</b> &nbsp;
-      <kbd>N</kbd> auto-next on 85+: <b id="o-next">on</b> &nbsp;
-      <kbd>V</kbd> model voice: <b id="o-voice">female</b> &nbsp;
-      <kbd>R</kbd> clarity check: <b id="o-recog">on</b> &nbsp;
-      <kbd>X</kbd> reset &nbsp; <kbd>?</kbd> help
+      <button class="act" data-k="m" tabindex="-1"><kbd>M</kbd><span>play model first: <b id="o-model">on</b></span></button>
+      <button class="act" data-k="n" tabindex="-1"><kbd>N</kbd><span>auto-next on 85+: <b id="o-next">on</b></span></button>
+      <button class="act" data-k="v" tabindex="-1"><kbd>V</kbd><span>model voice: <b id="o-voice">female</b></span></button>
+      <button class="act" data-k="r" tabindex="-1"><kbd>R</kbd><span>clarity check: <b id="o-recog">on</b></span></button>
+      <button class="act" data-k="x" tabindex="-1"><kbd>X</kbd><span>reset profile</span></button>
     </p>
   </section>
 
@@ -37,7 +37,7 @@
       <span><i class="sw loud"></i>your loudness while recording (peaks = stresses)</span>
       <span><i class="sw ring"></i><i class="sw ring big"></i>your syllables (bigger = stronger)</span>
       <span><i class="sw fill"></i>your strongest syllable</span>
-      <span class="muted"><kbd>G</kbd> hide · <kbd>?</kbd> full guide</span>
+      <span class="muted"><button class="act mini" data-k="g" tabindex="-1"><kbd>G</kbd><span>hide</span></button> <button class="act mini" data-k="?" tabindex="-1"><kbd>?</kbd><span>full guide</span></button></span>
     </div>
     <div id="feedback"></div>
     <div id="keys" class="keys"></div>
@@ -77,6 +77,7 @@
       <div><svg data-tune="risefall" viewBox="0 0 120 42"></svg><b>↗↘ Rise-fall</b><span>Swoop up, then fall steeply. Strong feeling: <i>“That's aMAZing!”</i></span></div>
     </div>
     <h3>Keys</h3>
+    <p class="muted">On a phone, use the buttons at the bottom of the screen instead; every key below has a button.</p>
     <table>
       <tr><td><kbd>Space</kbd></td><td>speak · while recording: restart · after feedback: try again</td></tr>
       <tr><td><kbd>Enter</kbd></td><td>while recording: finish now (it also finishes when you pause)</td></tr>
@@ -92,7 +93,7 @@
       <b>word stress</b>, <b>rhythm</b> (stressed syllables long and loud, small words squeezed), <b>pitch range</b>, and <b>clarity</b>
       (whether Chrome's speech recognition understood the words; this sends audio to the browser vendor).</p>
     <p class="muted">Tip: use headphones or a quiet room. Exaggerate. Most learners use far too little pitch movement.</p>
-    <p class="keys"><kbd>?</kbd> or <kbd>Esc</kbd> to close</p>
+    <p class="keys"><kbd>?</kbd> or <kbd>Esc</kbd> to close (or tap ×)</p>
   </aside>
 </main>
 <script src="js/data.js"></script>

@@ -71,9 +71,16 @@
     P.draw(cv, it.contour, { user: S.result && S.result.pts, marks: S.result && S.result.marks, range: S.result && S.result.range, ...extra });
   }
 
-  function keys(html) { $("#keys").innerHTML = html; }
-  const K_IDLE = `<kbd>Space</kbd> speak &nbsp; <kbd>M</kbd> model voice &nbsp; <kbd>H</kbd> hum (melody only) &nbsp; <kbd>Enter</kbd> skip &nbsp; <kbd>Esc</kbd> menu`;
-  const K_DONE = `<kbd>F</kbd> <b>hear it fixed</b> &nbsp; <kbd>P</kbd> hear yourself &nbsp; <kbd>Space</kbd> try again &nbsp; <kbd>Enter</kbd> next &nbsp; <kbd>M</kbd> model &nbsp; <kbd>H</kbd> hum`;
+  // Every action is a button (tap) that also shows its key (keyboard). [key, label, primary?]
+  const KEYNAME = { " ": "Space", Enter: "Enter", Escape: "Esc" };
+  const btn = (k, label, cls = "") => `<button class="act ${cls}" data-k="${k === " " ? "space" : k}" tabindex="-1"><kbd>${KEYNAME[k] || k.toUpperCase()}</kbd><span>${label}</span></button>`;
+  function keys(list) {
+    $("#keys").innerHTML = `<div class="prim">${list.filter((x) => x[2]).map(([k, l]) => btn(k, l, "primary")).join("")}</div>` +
+      `<div class="sec">${list.filter((x) => !x[2]).map(([k, l]) => btn(k, l)).join("")}</div>`;
+  }
+  const K_IDLE = [[" ", "🎤 Speak", true], ["m", "Model voice"], ["h", "Hum"], ["Enter", "Skip"], ["Escape", "Menu"]];
+  const K_DONE = [["Enter", "Next →", true], [" ", "🎤 Try again"], ["f", "Hear it fixed"], ["p", "Hear yourself"], ["m", "Model"], ["h", "Hum"], ["Escape", "Menu"]];
+  const K_REC = [["Enter", "■ Finish", true], [" ", "↺ Restart"], ["Escape", "Cancel"]];
 
   // ---------- flow ----------
   function startSession() {
@@ -92,6 +99,7 @@
     renderTop(); renderCard(); drawContour();
     $("#feedback").innerHTML = "";
     keys(K_IDLE);
+    window.scrollTo({ top: 0 });
     if (opt.autoModel && !S.item.challenge) setTimeout(() => { if (S && !Mic.recording() && !S.result) playModel(); }, 200);
   }
 
@@ -126,7 +134,7 @@
     clearTimeout(S.auto);
     $("#drill").classList.add("recording");
     $("#feedback").innerHTML = `<div class="listening"><span class="rec-dot"></span> Listening… it stops when you pause. <span class="meter"><i></i></span></div>`;
-    keys(`<kbd>Space</kbd> restart &nbsp; <kbd>Enter</kbd> finish &nbsp; <kbd>Esc</kbd> cancel`);
+    keys(K_REC);
     const meter = () => $(".meter i");
     startLive();
     Mic.start({
@@ -193,6 +201,8 @@
     if (rec.recognition) dims.clarity = { score: null, pending: true };
     renderFeedback(dims);
     keys(K_DONE);
+    // phones: bring the chart and the score into view above the button bar
+    if (matchMedia("(hover: none) and (pointer: coarse), (max-width: 560px)").matches) $("#contour").scrollIntoView({ behavior: "smooth", block: "start" });
     if (rec.recognition) rec.recognition.then((alts) => {
       if (S.result !== r) return;
       if (alts && alts.length) {
@@ -226,7 +236,7 @@
     const ovc = ov >= 80 ? "good" : ov >= 55 ? "ok" : "bad";
     $("#feedback").innerHTML = `
       <div class="overall"><b class="${ovc}">${ov ?? "–"}</b><span>${ov >= 85 ? "Great!" : ov >= 65 ? "Getting there." : "Not yet."}
-        ${ov < 85 ? ` Press <kbd>F</kbd> to hear <b>your own voice</b> with the fix applied, then copy it.` : ""}${S.attempts > 1 ? ` · attempt ${S.attempts}` : ""}</span></div>
+        ${ov < 85 ? ` ${btn("f", "Hear it fixed", "inline")} plays <b>your own voice</b> with the fix applied. Copy it.` : ""}${S.attempts > 1 ? ` · attempt ${S.attempts}` : ""}</span></div>
       ${rhythmStrip()}
       ${rows.map(([d, v]) => `<div class="dim ${C.skillOf(S.item, d) === S.item.primary ? "primary" : ""}">
         <span class="dn">${DIM_NAMES[d]}</span>${v.pending ? `<span class="muted">checking…</span>` : `${bar(v.score ?? 0)}<em>${v.score ?? "–"}</em>`}
@@ -271,13 +281,27 @@
       <div class="stats"><div><b>${avg}</b><span>average score</span></div><div><b>${S.done}</b><span>phrases</span></div></div>
       ${changes.length ? `<h3>Skill changes</h3><div class="skills">${changes.map((c) => `<div class="skill"><span>${C.SKILLS[c.k].name}</span>${bar(c.to)}<em>${c.from == null ? "new" : c.from} → ${c.to}</em></div>`).join("")}</div>` : ""}
       ${weak.length ? `<p class="coachnote">Next session focuses on <b>${weak.map((k) => C.SKILLS[k].name.toLowerCase()).join("</b> and <b>")}</b>.</p>` : ""}
-      <p class="keys"><kbd>Space</kbd> next session &nbsp; <kbd>Esc</kbd> menu</p>`;
+      <div class="actions">${btn(" ", "Next session", "primary")}${btn("Escape", "Menu")}</div>`;
   }
 
   // ---------- keyboard ----------
   document.addEventListener("keydown", (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (k === " " || k === "Enter") e.preventDefault(); // never also "click" a focused button
+    act(k);
+  });
+  // taps / clicks on any action button
+  document.addEventListener("pointerdown", (e) => { if (e.target.closest(".act")) e.preventDefault(); }); // keep focus off buttons
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-k]");
+    if (!b) return;
+    e.preventDefault();
+    act(b.dataset.k === "space" ? " " : b.dataset.k);
+  });
+
+  function act(k) {
+    const e = { preventDefault() {} };
     const help = $("#help");
     if (k === "?") { help.hidden = !help.hidden; return; }
     if (!help.hidden) { if (k === "Escape") help.hidden = true; return; }
@@ -320,7 +344,7 @@
     if (k === "t") { clearTimeout(S.auto); P.say(S.item.text); return; }
     if (k === "f") { playFixed(); return; }
     if (k === "p" && S.rec) { clearTimeout(S.auto); Mic.play(S.rec.samples, S.rec.sr); return; }
-  });
+  }
 
   $("#start").addEventListener("click", startSession);
   window.addEventListener("resize", () => { if (screen === "drill" && S && S.item) drawContour(); });
