@@ -80,11 +80,23 @@
     s = Math.max(0, s - 3); e = Math.min(nF - 1, e + 3);
 
     // pitch
-    const raw = new Float32Array(nF);
+    const raw = new Float32Array(nF), cand = new Float32Array(nF), cla = new Float32Array(nF);
     for (let f = s; f <= e; f++) {
-      if (dB[f] < thr) continue;
+      if (dB[f] < thr - 6) continue;
       const r = pitchAt(x, f * HOP + 200);
-      if (r.cl >= 0.5 && r.hz > 0) raw[f] = r.hz;
+      cand[f] = r.hz; cla[f] = r.cl;
+      if (r.cl >= 0.5 && r.hz > 0 && dB[f] >= thr) raw[f] = r.hz;
+    }
+    // Continue confident pitch tracks into weaker frames (creaky or quiet phrase endings) as long
+    // as the pitch stays continuous; creak often reads as half the real frequency.
+    const near = (h, ref) => {
+      if (!h) return 0;
+      for (const k of [1, 2, 0.5]) { const v = h * k; if (Math.abs(Math.log2(v / ref)) < 0.2) return v; }
+      return 0;
+    };
+    for (let pass = 0; pass < 2; pass++) {
+      for (let f = s + 1; f <= e; f++) if (!raw[f] && raw[f - 1] && cla[f] >= 0.25) raw[f] = near(cand[f], raw[f - 1]);
+      for (let f = e - 1; f >= s; f--) if (!raw[f] && raw[f + 1] && cla[f] >= 0.25) raw[f] = near(cand[f], raw[f + 1]);
     }
     const voicedHz = Array.from(raw).filter((h) => h > 0);
     if (voicedHz.length < 8) return null;
@@ -225,14 +237,65 @@
     return Math.min(n - 1, Math.max(0, Math.floor(((bf - a) / (b - a || 1)) * n)));
   }
 
+  // Force-split the voiced span into exactly n syllables at the deepest loudness dips
+  // (unvoiced consonants count as extra-deep). Fluent speech often has no clear dip between
+  // syllables joined by n, l, m, r, so peak-counting alone under-counts them.
+  A.cfg = { wordForced: "mismatch" };
+  A._forced = (x, n) => forcedSegments(x, n);
+  function forcedSegments(x, n) {
+    let v0 = x.s, v1 = x.e; while (v0 < x.e && !x.hz[v0]) v0++; while (v1 > v0 && !x.hz[v1]) v1--;
+    const a0 = Math.max(x.s, v0 - 3), b0 = Math.min(x.e, v1 + 5);
+    if (b0 - a0 < n * 5) return null;
+    const I = x.I, cands = [];
+    for (let f = a0 + 4; f <= b0 - 4; f++) {
+      if (!(I[f] <= I[f - 1] && I[f] <= I[f + 1])) continue;
+      let l = -Infinity, r = -Infinity;
+      for (let k = Math.max(a0, f - 15); k < f; k++) l = Math.max(l, I[k]);
+      for (let k = f + 1; k <= Math.min(b0, f + 15); k++) r = Math.max(r, I[k]);
+      let unv = 0; for (let k = f - 2; k <= f + 2; k++) if (!x.hz[k]) unv++;
+      cands.push({ f, depth: Math.min(l, r) - I[f] + (unv >= 2 ? 4 : 0) });
+    }
+    cands.sort((p, q) => q.depth - p.depth);
+    const cuts = [];
+    for (const c of cands) {
+      if (cuts.length >= n - 1) break;
+      if (c.f - a0 < 5 || b0 - c.f < 5 || cuts.some((u) => Math.abs(u - c.f) < 6)) continue;
+      cuts.push(c.f);
+    }
+    let bounds = [a0, ...cuts.sort((p, q) => p - q), b0];
+    while (bounds.length - 1 < n) { // not enough dips: split the longest segment
+      let w = 0; for (let i = 1; i < bounds.length - 1; i++) if (bounds[i + 1] - bounds[i] > bounds[w + 1] - bounds[w]) w = i;
+      bounds.splice(w + 1, 0, Math.round((bounds[w] + bounds[w + 1]) / 2));
+    }
+    return bounds.slice(0, -1).map((a, i) => {
+      const b = bounds[i + 1];
+      const sts = []; let pk = -Infinity, pf = a;
+      for (let k = a; k <= b; k++) { if (x.st[k] != null) sts.push(x.st[k]); if (I[k] > pk) { pk = I[k]; pf = k; } }
+      return { a: a / 100, b: b / 100, t: pf / 100, dur: (b - a) / 100, dB: pk, voiced: sts.length,
+        stMax: sts.length ? Math.max(...sts) : 0, stMin: sts.length ? Math.min(...sts) : 0 };
+    });
+  }
+
   // ---------- full analysis against an item ----------
   // item: { kind: 'word'|'sentence', contour, words, tune, stressIdx (word), focusWord }
-  A.analyze = function (samples, sr, item) {
+  // Syllable segment measured over a known time span [a, b] (seconds).
+  function segment(x, a, b, j) {
+    const fa = Math.max(0, Math.round(a * 100)), fb = Math.min(x.nF - 1, Math.round(b * 100));
+    const sts = []; let pk = -Infinity, pf = fa;
+    for (let k = fa; k <= fb; k++) { if (x.st[k] != null) sts.push(x.st[k]); if (x.I[k] > pk) { pk = x.I[k]; pf = k; } }
+    return { a, b, t: pf / 100, dur: b - a, dB: pk, voiced: sts.length, exp: j,
+      stMax: sts.length ? Math.max(...sts) : 0, stMin: sts.length ? Math.min(...sts) : 0 };
+  }
+
+  // opts.syl: known time span {a, b} of every expected syllable in this recording (from aligning
+  // it to the model voice). Without it, syllables are found from loudness peaks and guessed.
+  A.analyze = function (samples, sr, item, opts = {}) {
     const x = A.extract(samples, sr);
     if (!x) return { error: "I couldn't hear enough voiced speech. Speak a bit louder and closer to the mic." };
     const c = item.contour, exp = c.syls;
-    const det = x.nuclei;
-    const map = align(det, exp, x.t0, x.t1);
+    const known = !!(opts.syl && opts.syl.length === exp.length);
+    const det = known ? opts.syl.map((p, j) => segment(x, p.a, p.b, j)).filter((d) => d.dur >= 0.025) : x.nuclei;
+    const map = known ? det.map((d) => d.exp) : align(det, exp, x.t0, x.t1);
     const prom = prominence(det, x.med);
     det.forEach((d, i) => { d.exp = map[i]; d.prom = prom[i]; d.wi = map[i] >= 0 ? exp[map[i]].wi : -1; });
     const order = det.map((_, i) => i).sort((a, b) => prom[b] - prom[a]);
@@ -241,9 +304,10 @@
     // pitch points mapped onto target time for display/correlation
     const tA = exp[0].start, tB = exp[exp.length - 1].start + exp[exp.length - 1].dur;
     // anchors: speech start/end + every matched syllable nucleus -> its target syllable centre
-    const anc = [[x.t0, tA]];
-    det.forEach((d) => { if (d.exp >= 0) { const s = exp[d.exp]; anc.push([d.t, s.start + s.dur / 2]); } });
-    anc.push([x.t1, tB]);
+    const anc = known ? [] : [[x.t0, tA]];
+    if (known) det.forEach((d) => { const s = exp[d.exp]; anc.push([d.a, s.start], [d.b, s.start + s.dur]); });
+    else det.forEach((d) => { if (d.exp >= 0) { const s = exp[d.exp]; anc.push([d.t, s.start + s.dur / 2]); } });
+    if (!known) anc.push([x.t1, tB]);
     anc.sort((a, b) => a[0] - b[0]);
     const A2 = anc.filter((p, i) => i === 0 || (p[0] > anc[i - 1][0] + 0.01 && p[1] > anc[i - 1][1]));
     const toT = (t) => {
@@ -257,7 +321,7 @@
     const pts = []; for (let f = x.s; f <= x.e; f++) if (x.st[f] != null) pts.push([toT(f / 100), x.st[f] + tMed, f / 100]);
     const marks = det.map((d) => ({ t: toT(d.t), prom: d.prom, top: d === top }));
 
-    const res = { x, det, pts, marks, dims: {}, toT, tMed };
+    const res = { x, det, pts, marks, dims: {}, toT, tMed, known };
     const words = c.words;
     const wordText = (wi) => (wi >= 0 ? words[wi].text.replace(/[^\w'’-]/g, "") : "?");
     const nucExp = exp.findIndex((s) => s.nuc);
@@ -284,7 +348,11 @@
       const want = item.stressIdx;
       const syls = exp.map((s) => s.t);
       let got = top.exp;
-      if (det.length !== syls.length) got = framePeakSyllable(x, syls.length);
+      if (!known && syls.length > 1 && (A.cfg.wordForced === "always" || det.length !== syls.length)) {
+        const seg = forcedSegments(x, syls.length);
+        if (seg) { const pr = prominence(seg, x.med); got = pr.indexOf(Math.max(...pr)); res.wordSegs = seg.map((g, i) => ({ ...g, prom: pr[i] })); }
+        else got = framePeakSyllable(x, syls.length);
+      }
       const show = (j) => syls.map((s, i) => (i === j ? s.toUpperCase() : s)).join("-");
       let score, tip = "";
       if (got === want) { score = 100; }

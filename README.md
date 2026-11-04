@@ -10,7 +10,7 @@ Everything is keyboard-driven and fast.
 
 1. Press `Space` on the menu to start a 10-phrase session.
 2. Each phrase shows its stress marks (**bold** = stressed, orange = main stress) and the target melody line.
-   A hummed model plays first, so you hear only the melody.
+   A natural model voice says it first, with the target melody (`M` replays it; `H` plays just the melody as a hum).
 3. Press `Space` and speak. Recording stops on its own when you pause.
 4. You get a score plus feedback lines like *"Your main stress landed on 'Mary'. Put it on 'red'"* or
    *"From 'party' onward your pitch fell. It should rise at the end."* Your pitch appears over the target,
@@ -38,8 +38,8 @@ with the lowest score, with some variety. Your profile and per-phrase history ar
 
 ## Keys
 
-`Space` speak / restart while recording / retry · `Enter` finish recording or next phrase · `F` hear it fixed · `M` model hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
-Menu: `M` auto-play model · `N` auto-next on 85+ · `V` low/high hum voice · `R` clarity check · `X` reset profile
+`Space` speak / restart while recording / retry · `Enter` finish recording or next phrase · `F` hear it fixed · `M` model voice · `H` hum · `T` natural voice (text-to-speech) · `P` hear yourself · `Esc` menu · `?` help
+Menu: `M` auto-play model · `N` auto-next on 85+ · `V` female/male model voice · `R` clarity check · `X` reset profile
 
 ## Run locally
 
@@ -61,8 +61,14 @@ Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
 - `js/mic.js`: capture with voice-activity auto-stop, plus optional Web Speech recognition.
 - `js/resynth.js`: "hear it fixed". TD-PSOLA re-synthesis of your recording: pitch re-shaped to the target tune
   around your own voice level, stressed syllables stretched and weak ones squeezed, stresses made louder.
+- `js/voice.js` + `audio/`: the model voice, a natural neural voice (Kokoro) recorded offline for every phrase and
+  prosody-corrected to the target. To rebuild it after adding content, see `tools/voices/README.md`.
 - `js/data.js` + `js/bank.js`: about 290 words, 70 focus answers, 60 tune phrases and 50 rhythm sentences. Add your own: `I 'left my 'keys in the *kitch-en.`
   (`'` = stressed syllable, `*` = main stress, `-` between syllables).
 
 Limits: the analysis is a heuristic, not a trained model. It judges prosody (melody, stress, timing), not individual
 vowel and consonant sounds. Use headphones or a quiet room for the most reliable results.
+
+## Credits
+
+Model voices: [Kokoro-82M](https://github.com/hexgrad/kokoro) by hexgrad (Apache-2.0), voices `af_heart` and `am_michael`.

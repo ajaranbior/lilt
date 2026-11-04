@@ -1,0 +1,4 @@
+tools/voices/work/
+*.onnx
+voices-v1.0.bin
+venv/

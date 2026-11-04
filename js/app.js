@@ -35,7 +35,7 @@
       : `<p class="coachnote">Your first ~10 phrases are a placement check. After that the coach keeps serving what you find hardest.</p>`;
     $("#o-model").textContent = opt.autoModel ? "on" : "off";
     $("#o-next").textContent = opt.autoNext ? "on" : "off";
-    $("#o-voice").textContent = P.settings.base < 150 ? "low" : "high";
+    $("#o-voice").textContent = Voice.voice() === "m" ? "male" : "female";
     $("#o-recog").textContent = Mic.canRecognize ? (C.useRecognition() ? "on" : "off") : "n/a in this browser";
   }
 
@@ -71,8 +71,8 @@
   }
 
   function keys(html) { $("#keys").innerHTML = html; }
-  const K_IDLE = `<kbd>Space</kbd> speak &nbsp; <kbd>M</kbd> model hum &nbsp; <kbd>T</kbd> natural voice &nbsp; <kbd>Enter</kbd> skip &nbsp; <kbd>Esc</kbd> menu`;
-  const K_DONE = `<kbd>F</kbd> <b>hear it fixed</b> &nbsp; <kbd>P</kbd> hear yourself &nbsp; <kbd>Space</kbd> try again &nbsp; <kbd>Enter</kbd> next &nbsp; <kbd>M</kbd> model`;
+  const K_IDLE = `<kbd>Space</kbd> speak &nbsp; <kbd>M</kbd> model voice &nbsp; <kbd>H</kbd> hum (melody only) &nbsp; <kbd>Enter</kbd> skip &nbsp; <kbd>Esc</kbd> menu`;
+  const K_DONE = `<kbd>F</kbd> <b>hear it fixed</b> &nbsp; <kbd>P</kbd> hear yourself &nbsp; <kbd>Space</kbd> try again &nbsp; <kbd>Enter</kbd> next &nbsp; <kbd>M</kbd> model &nbsp; <kbd>H</kbd> hum`;
 
   // ---------- flow ----------
   function startSession() {
@@ -86,6 +86,7 @@
     Mic.cancel(); stopLive(); P.stop();
     if (S.done >= SESSION) return endSession();
     S.item = C.next(); S.result = null; S.attempts = 0; S.rec = null;
+    Voice.prefetch(S.item);
     S.skills.add(S.item.primary);
     renderTop(); renderCard(); drawContour();
     $("#feedback").innerHTML = "";
@@ -94,15 +95,24 @@
   }
 
   let animId = 0;
-  function playModel() {
-    const it = S.item;
-    const { t0 } = P.hum(it.contour);
-    const id = ++animId;
+  // M: the recorded model voice when there is one, otherwise the hum. H: always the hum.
+  async function playModel(humOnly) {
+    const it = S.item, id = ++animId;
+    let t0, scale = 1, dur = it.contour.total;
+    if (!humOnly && Voice.has(it)) {
+      try {
+        await Voice.buffer(it);                                  // may still be downloading
+        if (id !== animId || Mic.recording()) return;            // user moved on (or started speaking) meanwhile
+        const r = await Voice.play(it); t0 = r.t0; dur = r.dur; scale = it.contour.total / r.dur;
+      }
+      catch (e) { if (id !== animId) return; }
+    }
+    if (t0 == null) ({ t0 } = P.hum(it.contour));
     const step = () => {
       if (id !== animId) return;
       const t = P.audio().currentTime - t0;
-      drawContour({ head: t });
-      if (t < it.contour.total + 0.1) requestAnimationFrame(step); else drawContour();
+      drawContour({ head: t * scale });
+      if (t < dur + 0.1) requestAnimationFrame(step); else drawContour();
     };
     step();
   }
@@ -266,7 +276,7 @@
       if (k === " " || k === "Enter") { e.preventDefault(); startSession(); }
       else if (k === "m") { opt.autoModel = !opt.autoModel; C.store.set("autoModel", opt.autoModel); renderHome(); }
       else if (k === "n") { opt.autoNext = !opt.autoNext; C.store.set("autoNext", opt.autoNext); renderHome(); }
-      else if (k === "v") { P.settings.base = P.settings.base < 150 ? 200 : 120; C.store.set("base", P.settings.base); renderHome(); P.hum(P.contour(P.parse("'hel-lo"), "fall")); }
+      else if (k === "v") { const v = Voice.voice() === "f" ? "m" : "f"; C.store.set("voice", v); P.settings.base = v === "m" ? 120 : 200; C.store.set("base", P.settings.base); renderHome(); }
       else if (k === "r" && Mic.canRecognize) { C.store.set("recog", !C.useRecognition()); renderHome(); }
       else if (k === "x") { if (confirm("Reset your skill profile?")) { C.reset(); renderHome(); } }
       return;
@@ -297,6 +307,7 @@
       advance(); return;
     }
     if (k === "m") { clearTimeout(S.auto); playModel(); return; }
+    if (k === "h") { clearTimeout(S.auto); playModel(true); return; }
     if (k === "t") { clearTimeout(S.auto); P.say(S.item.text); return; }
     if (k === "f") { playFixed(); return; }
     if (k === "p" && S.rec) { clearTimeout(S.auto); Mic.play(S.rec.samples, S.rec.sr); return; }
@@ -305,7 +316,7 @@
   $("#start").addEventListener("click", startSession);
   window.addEventListener("resize", () => { if (screen === "drill" && S && S.item) drawContour(); });
 
-  P.settings.base = C.store.get("base", 120);
+  P.settings.base = C.store.get("base", Voice.voice() === "m" ? 120 : 200);
   $("#legend").hidden = !C.store.get("legend", true);
   // tiny tune diagrams in the help, drawn from the same model as the hum
   document.querySelectorAll("svg[data-tune]").forEach((svg) => {

@@ -16,7 +16,7 @@
   }
 
   // Build the target plan (time warp, pitch, gain) from an analysis result.
-  R.plan = function (r, item, amount = 0.9) {
+  R.plan = function (r, item, amount = 0.9, microW = 0.6) {
     const x = r.x, c = item.contour, exp = c.syls;
     const det = [...r.det].sort((a, b) => a.a - b.a);
     const str = (d) => d.exp >= 0 && exp[d.exp].stress, nuc = (d) => d.exp >= 0 && exp[d.exp].nuc;
@@ -49,11 +49,23 @@
     const micro = (f) => {
       const v = stU(f); if (v == null) return 0;
       const w = []; for (let k = f - 4; k <= f + 4; k++) if (stU(k) != null) w.push(stU(k));
-      return Math.max(-1, Math.min(1, v - mean(w)));
+      return Math.max(-2, Math.min(2, v - mean(w)));
+    };
+    // The tune (nucleus to end) is fitted into the voiced part of the speech: the end of a phrase
+    // is often creaky or voiceless, and a fall placed there would never be heard.
+    let fl = x.nF - 1; while (fl > 0 && !x.hz[fl]) fl--;
+    const uEnd = fl / 100 + 0.0125;
+    const nd = det.find(nuc);
+    const uN = nd ? nd.a : null;
+    const mEnd = exp[exp.length - 1].start + exp[exp.length - 1].dur;
+    const modelT = (u) => {
+      if (uN == null || u < uN || uEnd <= uN + 0.05) return r.toT(u);
+      const mN = r.toT(uN);
+      return mN + (Math.min(u, uEnd) - uN) / (uEnd - uN) * (mEnd - mN);
     };
     const hzAt = (u) => {
       const f = frameOf(u);
-      const st = (tgt(r.toT(u)) - r.tMed) * amount + 0.6 * micro(f);
+      const st = (tgt(modelT(u)) - r.tMed) * amount + microW * micro(f);
       return Math.max(60, Math.min(500, x.med * Math.pow(2, st / 12)));
     };
     const gainAt = (u) => {
@@ -61,12 +73,13 @@
       if (!d || d.exp < 0) return 1;
       return nuc(d) ? 1.5 : str(d) ? 1.3 : 0.7;
     };
-    return { inToOut, outToIn, hzAt, gainAt, fS, fU, frameOf };
+    return { inToOut, outToIn, hzAt, gainAt, fS, fU, frameOf, modelT, tgt, uN, uEnd };
   };
 
-  R.fix = function (samples, sr, r, item) {
+  // opts.amount: how strongly to impose the target contour; opts.micro: how much natural pitch detail to keep
+  R.fix = function (samples, sr, r, item, opts = {}) {
     const x = r.x, N = samples.length;
-    const pl = R.plan(r, item);
+    const pl = R.plan(r, item, opts.amount ?? 0.9, opts.micro ?? 0.6);
     // input f0 per frame with short gaps bridged
     const F0 = Float32Array.from(x.hz);
     for (let f = 0; f < F0.length;) {

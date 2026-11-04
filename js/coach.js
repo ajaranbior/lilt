@@ -125,5 +125,12 @@
   };
   C.order = ORDER;
 
+  // Every item the coach can serve (used by tools/voices to pre-record model audio).
+  C.allItems = function () {
+    const out = new Map();
+    ORDER.forEach((k) => pool(k).forEach((mk) => { const it = mk(); if (!out.has(it.id)) out.set(it.id, it); }));
+    return [...out.values()];
+  };
+
   window.Coach = C;
 })();
