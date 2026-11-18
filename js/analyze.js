@@ -470,7 +470,16 @@
     const dir = (d) => (d > 1 ? "up" : d < -1 ? "down" : "flat");
     const msc = Math.round(100 * (0.6 * clamp01((rc - 0.3) / 0.55) + 0.4 * (same ? 1 : 0)));
     dims.melody = { score: msc, detail: `match ${Math.round(Math.max(0, rc) * 100)}% · end ${dir(dY)}`,
-      tip: !same && yours.length >= 4 ? `After “${wordText(exp[nucJ].wi)}” their voice goes ${dir(dT)}; yours went ${dir(dY)}. Listen again (M) and copy the ending.`
+      tip: !same && yours.length >= 4 ? (() => {
+        const w = `“${wordText(exp[nucJ].wi)}”`;
+        const them = { down: `their voice drops lower, which is how a statement sounds finished`,
+          up: `their voice rises higher, like a question or “there's more coming”`,
+          flat: `their voice stays level` }[dir(dT)];
+        const you = { down: "yours dropped", up: "yours rose", flat: "yours stayed level, so it can sound unfinished" }[dir(dY)];
+        const doIt = { down: `let your voice fall on ${w}, as if you're closing the sentence`,
+          up: `lift your voice on ${w}`, flat: `keep your voice steady on ${w}` }[dir(dT)];
+        return `The ending is off. On ${w}, ${them}; ${you}. Press M to hear the model (or F to hear yourself fixed), then ${doIt}.`;
+      })()
         : msc < 70 ? "Your pitch shape differs from theirs. Listen (M), then copy where their voice goes high and where it drops." : "" };
     // stress: do the same syllables stand out?
     const up = exp.map((_, j) => { const d = r.det.find((q) => q.exp === j); return d ? d.prom : null; });
